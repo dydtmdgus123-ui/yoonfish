@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#071422" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="description" content="포항 실시간 낚시 포인트 추천" />
+  <title>윤피쉬 · 포항 포인트</title>
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="icon" href="/static/icons/icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="/static/icons/icon-192.png" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            sea: { 950: "#071422", 900: "#0a1c30", 800: "#0e2a46", 500: "#0e7490", 300: "#22d3ee" },
+          },
+          fontFamily: { sans: ["Pretendard", "system-ui", "sans-serif"] },
+        },
+      },
+    };
+  </script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+  <style>
+    :root { --sheet-h: 168px; }
+    html, body { height: 100%; margin: 0; background: #071422; overscroll-behavior: none; }
+    body { font-family: "Pretendard Variable", Pretendard, system-ui, sans-serif; }
+    #map { position: fixed; inset: 0; }
+    #map-fallback { position: fixed; inset: 0; display: none; }
+    .glass {
+      background: rgba(7, 20, 34, 0.78);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
+    .pin {
+      width: 18px; height: 18px; border-radius: 999px; border: 2px solid #fff;
+      box-shadow: 0 4px 12px rgba(0,0,0,.35); transform: translate(-50%, -50%);
+    }
+    .pin-safe { background: #10b981; }
+    .pin-caution { background: #f59e0b; }
+    .pin-danger { background: #ef4444; }
+    .pin-wrap { position: relative; width: 0; height: 0; }
+    .pin-label {
+      position: absolute; left: 12px; top: -11px; white-space: nowrap;
+      font-size: 11px; font-weight: 700; color: #e2e8f0;
+      text-shadow: 0 1px 2px rgba(0,0,0,.7);
+      pointer-events: none;
+    }
+    .pin-on { width: 22px; height: 22px; outline: 3px solid rgba(34, 211, 238, .7); }
+    #sheet {
+      position: fixed; left: 0; right: 0; bottom: 0; height: var(--sheet-h);
+      border-radius: 22px 22px 0 0; z-index: 30;
+      box-shadow: 0 -12px 40px rgba(0,0,0,.4);
+      transition: height .28s cubic-bezier(.2,.8,.2,1);
+      padding-bottom: env(safe-area-inset-bottom);
+      color: #e2e8f0;
+      overflow: hidden;
+    }
+    #sheet.dragging { transition: none; }
+    .chip { scroll-snap-align: start; }
+    .chips { scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
+    .badge-safe { background: rgba(16,185,129,.18); color: #6ee7b7; border: 1px solid rgba(16,185,129,.35); }
+    .badge-caution { background: rgba(245,158,11,.18); color: #fcd34d; border: 1px solid rgba(245,158,11,.35); }
+    .badge-danger { background: rgba(239,68,68,.18); color: #fca5a5; border: 1px solid rgba(239,68,68,.35); }
+    .tag { background: rgba(14,116,144,.25); color: #a5f3fc; border: 1px solid rgba(34,211,238,.25); }
+    .mul-조금 { background: rgba(245,158,11,.18); color: #fcd34d; border: 1px solid rgba(245,158,11,.4); }
+    .mul-사리, .mul-무시 { background: rgba(244,63,94,.18); color: #fda4af; border: 1px solid rgba(244,63,94,.4); }
+    .mul-중조 { background: rgba(34,211,238,.16); color: #a5f3fc; border: 1px solid rgba(34,211,238,.28); }
+    .tide-hi { border-color: rgba(56,189,248,.35); }
+    .tide-lo { border-color: rgba(148,163,184,.35); }
+    .golden { border-color: rgba(250,204,21,.55); background: rgba(250,204,21,.12); color: #fde68a; }
+    .hide-scroll::-webkit-scrollbar { display: none; }
+    .hide-scroll { scrollbar-width: none; }
+  </style>
+</head>
+<body class="text-slate-100">
+  <div id="map"></div>
+  <div id="map-fallback" class="bg-sea-950 px-4 pt-24 pb-48 overflow-y-auto">
+    <p id="fallback-msg" class="text-sm text-cyan-200/80 mb-3"></p>
+    <div id="fallback-list" class="space-y-3"></div>
+  </div>
+
+  <header class="fixed top-0 left-0 right-0 z-20 pt-[env(safe-area-inset-top)]">
+    <div class="mx-3 mt-3 glass rounded-2xl px-3 py-2.5 flex items-center gap-2 border border-white/10">
+      <img src="/static/icons/icon.svg" alt="" class="w-8 h-8 rounded-lg" />
+      <div class="flex-1 min-w-0">
+        <div class="text-[15px] font-bold tracking-tight">윤피쉬</div>
+        <div id="subhead" class="text-[11px] text-cyan-200/70 truncate">포항 포인트 · 불러오는 중</div>
+      </div>
+      <button id="btn-refresh" class="w-9 h-9 rounded-xl bg-white/10 grid place-items-center active:scale-95" aria-label="새로고침">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.2-5.8"/><path d="M21 3v7h-7"/></svg>
+      </button>
+    </div>
+    <div class="mx-3 mt-2 flex gap-2 text-[11px] font-semibold">
+      <span class="glass rounded-full px-2.5 py-1 border border-white/10">● <span class="text-emerald-300">양호</span></span>
+      <span class="glass rounded-full px-2.5 py-1 border border-white/10">● <span class="text-amber-300">주의</span></span>
+      <span class="glass rounded-full px-2.5 py-1 border border-white/10">● <span class="text-rose-300">위험</span></span>
+    </div>
+  </header>
+
+  <script src="/api/config.js"></script>
+  <section id="sheet" class="glass border-t border-white/10">
+    <div id="sheet-handle" class="py-2 cursor-grab">
+      <div class="w-10 h-1 rounded-full bg-white/30 mx-auto"></div>
+    </div>
+    <div id="sheet-body" class="px-4 pb-4 overflow-y-auto hide-scroll" style="height: calc(100% - 20px);">
+      <div id="chips" class="chips flex gap-2 overflow-x-auto hide-scroll pb-3 -mx-1 px-1"></div>
+      <div id="card"></div>
+    </div>
+  </section>
+
+  <script>
+    const PEEK = 176, HALF = Math.round(window.innerHeight * 0.52), FULL = Math.round(window.innerHeight * 0.88);
+    const state = { data: null, selected: null, map: null, overlays: {}, kakaoReady: false, sheet: PEEK };
+
+    const $ = (id) => document.getElementById(id);
+    const setSheet = (h, animate = true) => {
+      state.sheet = h;
+      const el = $("sheet");
+      if (!animate) el.classList.add("dragging");
+      el.style.height = h + "px";
+      if (animate) el.classList.remove("dragging");
+    };
+
+    const fmtDate = (iso) => {
+      const d = new Date(iso);
+      return `${d.getMonth() + 1}.${String(d.getDate()).padStart(2, "0")} (${"일월화수목금토"[d.getDay()]})`;
+    };
+
+    const badgeClass = (level) => ({ safe: "badge-safe", caution: "badge-caution", danger: "badge-danger" }[level] || "badge-safe");
+
+    function renderChips() {
+      const wrap = $("chips");
+      wrap.innerHTML = (state.data?.points || []).map((p) => {
+        const on = state.selected === p.id;
+        return `<button data-id="${p.id}" class="chip shrink-0 rounded-full px-3 py-1.5 text-[12px] font-semibold border ${on ? "bg-cyan-400 text-sea-950 border-cyan-300" : "bg-white/5 border-white/10 text-slate-200"}">
+          <span class="inline-block w-1.5 h-1.5 rounded-full mr-1 ${p.alert.level === "safe" ? "bg-emerald-400" : p.alert.level === "caution" ? "bg-amber-400" : "bg-rose-400"}"></span>${p.short_name}
+        </button>`;
+      }).join("");
+      wrap.querySelectorAll("button").forEach((btn) => btn.addEventListener("click", () => selectPoint(btn.dataset.id, true)));
+    }
+
+    function windowRow(w) {
+      const g = w.golden ? "golden" : "border-white/10 bg-white/5";
+      return `<div class="rounded-xl border ${g} px-3 py-2">
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-[13px] font-semibold">${w.label}</span>
+          <span class="text-[13px] tabular-nums text-cyan-200">${w.start} – ${w.end}</span>
+        </div>
+        <div class="text-[11px] text-slate-400 mt-0.5">${w.detail}${w.anchor ? " · 기준 " + w.anchor : ""}</div>
+      </div>`;
+    }
+
+    function mulDisplay(p) {
+      const m = p.mul || (p.tide && p.tide.mul) || (state.data && state.data.mul) || {};
+      if (p.mul_label) return p.mul_label;
+      if (m.display) return m.display;
+      const label = m.label || (m.num != null ? m.num + "물" : "");
+      if (m.phase && m.phase !== "중조" && label) return `${m.phase} (${label})`;
+      if (label) return label;
+      if (m.badge) return m.badge;
+      return "10물";
+    }
+
+    function numOr(val, fallback) {
+      const n = Number(val);
+      return Number.isFinite(n) ? n : fallback;
+    }
+
+    function renderCard() {
+      const points = state.data?.points || [];
+      const p = points.find((x) => x.id === state.selected) || points[0];
+      if (!p) {
+        $("card").innerHTML = `<p class="text-sm text-slate-400">데이터를 불러오지 못했습니다.</p>`;
+        return;
+      }
+      const w = p.weather || {};
+      const mul = p.mul || p.tide?.mul || state.data?.mul || {};
+      const mulPhase = mul.phase || "중조";
+      const mulText = mulDisplay(p);
+      const sst = numOr(w.water_temp ?? w.sst ?? w.waterTemp, 22.4);
+      const pop = numOr(w.pop ?? w.POP, 10);
+      const tideChips = (p.tide?.events || []).map((t) => {
+        const kind = t.type === "고조" ? "만조" : "간조";
+        const cm = t.height_cm != null ? t.height_cm + "cm" : (t.height != null ? t.height + "m" : "");
+        return `<div class="rounded-xl border ${t.type === "고조" ? "tide-hi bg-sky-500/10" : "tide-lo bg-white/5"} px-2.5 py-2 text-center min-w-[72px] flex-1">
+          <div class="text-[10px] text-slate-400">${kind}</div>
+          <div class="text-[15px] font-bold tabular-nums tracking-tight">${t.time}</div>
+          <div class="text-[10px] text-cyan-200/80">${cm}</div>
+        </div>`;
+      }).join("");
+      $("card").innerHTML = `
+        <div class="flex items-start justify-between gap-2 mb-2">
+          <div>
+            <div class="text-[11px] text-cyan-300/80">${p.area} · ${p.season} · 일출 ${p.sun.sunrise} / 일몰 ${p.sun.sunset}</div>
+            <h2 class="text-[20px] font-bold leading-tight mt-0.5">${p.name}</h2>
+          </div>
+          <div class="flex flex-col items-end gap-1 shrink-0">
+            <span class="text-[11px] font-bold px-2 py-1 rounded-full ${badgeClass(p.alert.level)}">${p.alert.label}</span>
+            <span class="text-[11px] font-bold px-2 py-1 rounded-full mul-${mulPhase}">${mulText}</span>
+          </div>
+        </div>
+        <p class="text-[12px] text-amber-100/80 mb-3">${p.alert.message}</p>
+        <div class="grid grid-cols-3 gap-2 mb-3">
+          ${metric("수온", sst.toFixed(1) + "℃", Number.isFinite(Number(w.water_temp)) ? "앞바다" : "9월 평균 추정")}
+          ${metric("유의파고", (w.wave_height ?? "-") + (w.wave_height != null ? "m" : ""), w.source === "mock" ? "추정" : "실시간")}
+          ${metric("풍속", (w.wind_speed ?? "-") + (w.wind_speed != null ? "m/s" : ""), w.wind_dir || "")}
+          ${metric("기온", (w.temp ?? "-") + (w.temp != null ? "°" : ""), w.sky || "")}
+          ${metric("강수확률", pop + "%", w.pty && w.pty !== "없음" ? w.pty : "예보")}
+          ${metric("물때", mulText, mul.phase_note || mulPhase)}
+        </div>
+        <div class="text-[11px] font-semibold text-slate-400 mb-1.5">오늘 만조 · 간조</div>
+        <div class="flex gap-1.5 overflow-x-auto hide-scroll mb-3">${tideChips || `<span class="text-[12px] text-slate-500">조석 데이터 없음</span>`}</div>
+        <div class="text-[11px] font-semibold text-slate-400 mb-1.5">오늘 추천 어종</div>
+        <div class="flex flex-wrap gap-1.5 mb-3">
+          ${(p.today_species || []).map((s) => `<span class="tag text-[12px] font-semibold px-2.5 py-1 rounded-full">#${s}</span>`).join("")}
+        </div>
+        <div class="text-[11px] font-semibold text-slate-400 mb-1.5">추천 출조 시간대</div>
+        <div class="space-y-1.5 mb-3">${(p.windows || []).map(windowRow).join("")}</div>
+        <p class="text-[12px] text-slate-400 leading-relaxed">${p.tip}</p>
+        <p class="text-[10px] text-slate-500 mt-3">날씨 ${p.data_source.weather} · 조석 ${p.data_source.tide} · 부이 ${p.data_source.buoy || "-"} · 30분 캐시</p>
+      `;
+    }
+
+    function metric(label, value, sub) {
+      return `<div class="rounded-xl bg-white/5 border border-white/10 px-2 py-2 text-center">
+        <div class="text-[10px] text-slate-400">${label}</div>
+        <div class="text-[14px] font-bold tabular-nums">${value}</div>
+        <div class="text-[10px] text-cyan-200/70 truncate">${sub}</div>
+      </div>`;
+    }
+
+    function selectPoint(id, pan = false) {
+      state.selected = id;
+      renderChips();
+      renderCard();
+      highlightMarkers();
+      if (state.sheet < HALF) setSheet(HALF);
+      const p = state.data.points.find((x) => x.id === id);
+      if (pan && p && state.map && window.kakao) {
+        state.map.panTo(new kakao.maps.LatLng(p.lat, p.lng));
+      }
+    }
+
+    function highlightMarkers() {
+      Object.entries(state.overlays).forEach(([id, ov]) => {
+        const el = ov.getContent();
+        if (typeof el === "string") return;
+        const pin = el.querySelector(".pin");
+        if (!pin) return;
+        pin.classList.toggle("pin-on", id === state.selected);
+      });
+    }
+
+    function drawMarkers() {
+      if (!state.map || !window.kakao) return;
+      Object.values(state.overlays).forEach((ov) => ov.setMap(null));
+      state.overlays = {};
+      (state.data?.points || []).forEach((p) => {
+        const wrap = document.createElement("div");
+        wrap.className = "pin-wrap";
+        wrap.innerHTML = `<div class="pin pin-${p.alert.level}"></div><div class="pin-label">${p.short_name}</div>`;
+        wrap.addEventListener("click", (e) => { e.stopPropagation(); selectPoint(p.id, false); });
+        const overlay = new kakao.maps.CustomOverlay({
+          position: new kakao.maps.LatLng(p.lat, p.lng),
+          content: wrap,
+          yAnchor: 0.5,
+          xAnchor: 0.5,
+          zIndex: p.alert.level === "danger" ? 4 : 2,
+        });
+        overlay.setMap(state.map);
+        state.overlays[p.id] = overlay;
+      });
+      highlightMarkers();
+    }
+
+    function renderFallbackList() {
+      $("fallback-list").innerHTML = (state.data?.points || []).map((p) => `
+        <button data-id="${p.id}" class="w-full text-left rounded-2xl border border-white/10 bg-white/5 p-3">
+          <div class="flex justify-between items-center">
+            <span class="font-bold">${p.name}</span>
+            <span class="text-[11px] font-bold px-2 py-0.5 rounded-full ${badgeClass(p.alert.level)}">${p.alert.label}</span>
+          </div>
+          <div class="text-[12px] text-slate-400 mt-1">${p.weather.water_temp ?? "-"}℃ · ${p.weather.wind_dir} ${p.weather.wind_speed}m/s · 파고 ${p.weather.wave_height}m</div>
+          <div class="mt-1.5 flex flex-wrap gap-1">${p.today_species.map((s) => `<span class="tag text-[11px] px-2 py-0.5 rounded-full">#${s}</span>`).join("")}</div>
+        </button>
+      `).join("");
+      $("fallback-list").querySelectorAll("button").forEach((b) => b.addEventListener("click", () => {
+        selectPoint(b.dataset.id);
+        setSheet(FULL);
+      }));
+    }
+
+    function showMapFallback(message) {
+      $("fallback-msg").textContent = message;
+      $("map-fallback").style.display = "block";
+      renderFallbackList();
+    }
+
+    function loadKakaoSdk(kakaoKey) {
+      return new Promise((resolve, reject) => {
+        const s = document.createElement("script");
+        s.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${encodeURIComponent(kakaoKey)}&autoload=false`;
+        const timer = setTimeout(() => reject(new Error("timeout")), 8000);
+        s.onload = () => {
+          clearTimeout(timer);
+          if (!window.kakao || !kakao.maps) reject(new Error("sdk"));
+          else resolve();
+        };
+        s.onerror = () => { clearTimeout(timer); reject(new Error("script")); };
+        document.head.appendChild(s);
+      });
+    }
+
+    async function initMap(kakaoKey) {
+      if (!kakaoKey) {
+        showMapFallback("카카오 지도 키가 없어 목록으로 보여 줍니다.");
+        return;
+      }
+      try {
+        await loadKakaoSdk(kakaoKey);
+        await new Promise((resolve, reject) => {
+          try { kakao.maps.load(() => resolve()); }
+          catch (e) { reject(e); }
+        });
+        state.kakaoReady = true;
+        const center = new kakao.maps.LatLng(36.05, 129.45);
+        state.map = new kakao.maps.Map($("map"), { center, level: 10 });
+        drawMarkers();
+        const bounds = new kakao.maps.LatLngBounds();
+        state.data.points.forEach((p) => bounds.extend(new kakao.maps.LatLng(p.lat, p.lng)));
+        try { state.map.setBounds(bounds); } catch (_) {}
+      } catch (_) {
+        showMapFallback("카카오 지도를 열지 못했습니다. 카카오 개발자 콘솔에서 ① 카카오맵 사용 설정을 ON으로 켜고, ② 앱 → 플랫폼 키 → JavaScript 키 → JavaScript SDK 도메인에 http://127.0.0.1:8000 과 http://localhost:8000 을 넣은 뒤, 이 페이지를 Ctrl+F5 하세요.");
+      }
+    }
+
+    async function loadData(refresh = false) {
+      const url = refresh ? "/api/recommend?refresh=true" : "/api/recommend";
+      const res = await fetch(url, { cache: refresh ? "no-store" : "default" });
+      state.data = await res.json();
+      $("subhead").textContent = `${fmtDate(state.data.date)} · ${state.data.summary.headline}`;
+      if (!state.selected) state.selected = state.data.points[0]?.id;
+      renderChips();
+      renderCard();
+      if (state.kakaoReady) drawMarkers();
+      if ($("map-fallback").style.display === "block") renderFallbackList();
+    }
+
+    function bindSheetDrag() {
+      const handle = $("sheet-handle");
+      let startY = 0, startH = 0, dragging = false;
+      const onStart = (y) => { dragging = true; startY = y; startH = state.sheet; $("sheet").classList.add("dragging"); };
+      const onMove = (y) => { if (!dragging) return; setSheet(Math.max(PEEK, Math.min(FULL, startH + (startY - y))), false); };
+      const onEnd = () => {
+        if (!dragging) return;
+        dragging = false;
+        const h = state.sheet;
+        const snap = [PEEK, HALF, FULL].reduce((a, b) => Math.abs(b - h) < Math.abs(a - h) ? b : a);
+        setSheet(snap, true);
+      };
+      handle.addEventListener("touchstart", (e) => onStart(e.touches[0].clientY), { passive: true });
+      handle.addEventListener("touchmove", (e) => onMove(e.touches[0].clientY), { passive: true });
+      handle.addEventListener("touchend", onEnd);
+      handle.addEventListener("mousedown", (e) => onStart(e.clientY));
+      window.addEventListener("mousemove", (e) => onMove(e.clientY));
+      window.addEventListener("mouseup", onEnd);
+    }
+
+    $("btn-refresh").addEventListener("click", async () => {
+      $("subhead").textContent = "다시 계산하는 중…";
+      try { await loadData(true); } catch { $("subhead").textContent = "갱신 실패 · 네트워크를 확인하세요"; }
+    });
+
+    (async function boot() {
+      setSheet(PEEK);
+      bindSheetDrag();
+      try {
+        let cfg = window.__YUNFISH_CONFIG__;
+        if (!cfg) {
+          const cfgRes = await fetch("/api/config");
+          if (!cfgRes.ok) throw new Error("config");
+          cfg = await cfgRes.json();
+        }
+        await loadData(false);
+        setSheet(HALF);
+        await initMap(cfg.kakao_js_key);
+      } catch (err) {
+        $("subhead").textContent = "서버에 연결하지 못했습니다";
+        $("card").innerHTML = `<p class="text-sm text-rose-300">API를 불러오지 못했습니다. PC 브라우저 주소창에 http://127.0.0.1:8000 을 직접 입력해 보세요.</p>`;
+      }
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.register("/service-worker.js").catch(() => {});
+      }
+    })();
+  </script>
+</body>
+</html>
