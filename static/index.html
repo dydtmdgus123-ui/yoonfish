@@ -52,6 +52,24 @@
       pointer-events: none;
     }
     .pin-on { width: 22px; height: 22px; outline: 3px solid rgba(34, 211, 238, .7); }
+    .pin-mine {
+      width: 22px; height: 22px; border-radius: 7px; transform: translate(-50%, -50%);
+      background: linear-gradient(145deg, #fde68a, #f59e0b);
+      border: 2px solid #fff; box-shadow: 0 4px 14px rgba(245,158,11,.45);
+      display: grid; place-items: center; font-size: 12px; line-height: 1;
+    }
+    .pin-mine.pin-on { outline: 3px solid rgba(250, 204, 21, .75); }
+    .pulse-pin {
+      width: 16px; height: 16px; border-radius: 999px; transform: translate(-50%, -50%);
+      background: #38bdf8; border: 2px solid #fff;
+      box-shadow: 0 0 0 0 rgba(56,189,248,.65);
+      animation: gps-pulse 1.6s ease-out infinite;
+    }
+    @keyframes gps-pulse {
+      0% { box-shadow: 0 0 0 0 rgba(56,189,248,.55); }
+      70% { box-shadow: 0 0 0 16px rgba(56,189,248,0); }
+      100% { box-shadow: 0 0 0 0 rgba(56,189,248,0); }
+    }
     #sheet {
       position: fixed; left: 0; right: 0; bottom: 0; height: var(--sheet-h);
       border-radius: 22px 22px 0 0; z-index: 30;
@@ -62,6 +80,22 @@
       overflow: hidden;
     }
     #sheet.dragging { transition: none; }
+    #fabs {
+      position: fixed; right: 12px; z-index: 25;
+      display: flex; flex-direction: column; align-items: flex-end; gap: 8px;
+      bottom: calc(var(--sheet-h) + 16px);
+      transition: bottom .28s cubic-bezier(.2,.8,.2,1);
+    }
+    #sheet.dragging ~ #fabs { transition: none; }
+    .fab {
+      width: 46px; height: 46px; border-radius: 16px;
+      background: rgba(7, 20, 34, 0.82);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,.14);
+      color: #e0f2fe; box-shadow: 0 8px 24px rgba(0,0,0,.35);
+      display: grid; place-items: center;
+    }
+    .fab:active { transform: scale(.95); }
     .chip { scroll-snap-align: start; }
     .chips { scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
     .badge-safe { background: rgba(16,185,129,.18); color: #6ee7b7; border: 1px solid rgba(16,185,129,.35); }
@@ -71,8 +105,9 @@
     .mul-조금 { background: rgba(245,158,11,.18); color: #fcd34d; border: 1px solid rgba(245,158,11,.4); }
     .mul-사리, .mul-무시 { background: rgba(244,63,94,.18); color: #fda4af; border: 1px solid rgba(244,63,94,.4); }
     .mul-중조 { background: rgba(34,211,238,.16); color: #a5f3fc; border: 1px solid rgba(34,211,238,.28); }
-    .tide-hi { border-color: rgba(56,189,248,.35); }
-    .tide-lo { border-color: rgba(148,163,184,.35); }
+    .tide-hi { border-color: rgba(56,189,248,.45); background: rgba(14,165,233,.14); }
+    .tide-lo { border-color: rgba(148,163,184,.35); background: rgba(148,163,184,.08); }
+    .tide-now { outline: 2px solid rgba(250,204,21,.55); outline-offset: 1px; }
     .golden { border-color: rgba(250,204,21,.55); background: rgba(250,204,21,.12); color: #fde68a; }
     .logo-mark {
       width: 40px; height: 40px; flex-shrink: 0; display: block;
@@ -80,6 +115,23 @@
       box-shadow: 0 4px 12px rgba(8, 51, 68, .35);
     }
     .hide-scroll { scrollbar-width: none; }
+    .hide-scroll::-webkit-scrollbar { display: none; }
+    .field {
+      width: 100%; border-radius: 12px; background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.12); color: #e2e8f0;
+      padding: 10px 12px; font-size: 14px;
+    }
+    .field:focus { outline: none; border-color: rgba(34,211,238,.55); }
+    #save-modal { display: none; }
+    #save-modal.open { display: block; }
+    #toast {
+      position: fixed; left: 50%; transform: translateX(-50%);
+      bottom: calc(var(--sheet-h) + 72px); z-index: 60;
+      display: none; max-width: calc(100% - 32px);
+      padding: 8px 14px; border-radius: 999px;
+      background: rgba(7,20,34,.9); border: 1px solid rgba(255,255,255,.12);
+      font-size: 12px; color: #e2e8f0;
+    }
   </style>
 </head>
 <body class="text-slate-100">
@@ -118,18 +170,65 @@
       <span class="glass rounded-full px-2.5 py-1 border border-white/10">● <span class="text-emerald-300">양호</span></span>
       <span class="glass rounded-full px-2.5 py-1 border border-white/10">● <span class="text-amber-300">주의</span></span>
       <span class="glass rounded-full px-2.5 py-1 border border-white/10">● <span class="text-rose-300">위험</span></span>
+      <span class="glass rounded-full px-2.5 py-1 border border-white/10">⭐ <span class="text-amber-200">내 포인트</span></span>
     </div>
   </header>
+
+  <div id="fabs">
+    <button id="btn-save-here" class="hidden glass rounded-full px-3 py-2 text-[12px] font-bold border border-amber-300/40 text-amber-100 shadow-lg">📍 이 위치를 포인트로 저장</button>
+    <button id="btn-gps" class="fab" aria-label="내 위치">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>
+        <circle cx="12" cy="12" r="8"/>
+      </svg>
+    </button>
+  </div>
+  <div id="toast"></div>
 
   <section id="sheet" class="glass border-t border-white/10">
     <div id="sheet-handle" class="py-2 cursor-grab">
       <div class="w-10 h-1 rounded-full bg-white/30 mx-auto"></div>
     </div>
     <div id="sheet-body" class="px-4 pb-4 overflow-y-auto hide-scroll" style="height: calc(100% - 20px);">
+      <div class="flex gap-1 mb-2 p-1 rounded-xl bg-white/5 border border-white/10">
+        <button id="tab-official" class="flex-1 rounded-lg py-1.5 text-[12px] font-bold bg-cyan-400 text-sea-950">추천 포인트</button>
+        <button id="tab-mine" class="flex-1 rounded-lg py-1.5 text-[12px] font-bold text-slate-300">내 포인트 목록</button>
+      </div>
       <div id="chips" class="chips flex gap-2 overflow-x-auto hide-scroll pb-3 -mx-1 px-1"></div>
       <div id="card"></div>
     </div>
   </section>
+
+  <div id="save-modal" class="fixed inset-0 z-50">
+    <div id="save-backdrop" class="absolute inset-0 bg-black/55"></div>
+    <form id="save-form" class="absolute left-3 right-3 bottom-6 glass rounded-2xl border border-white/10 p-4 space-y-2.5">
+      <div class="flex items-center justify-between">
+        <h3 class="text-[16px] font-bold">📍 이 위치를 포인트로 저장</h3>
+        <button type="button" id="save-close" class="w-8 h-8 rounded-lg bg-white/10 grid place-items-center text-slate-300">✕</button>
+      </div>
+      <p id="save-coords" class="text-[11px] text-cyan-200/70"></p>
+      <label class="block text-[11px] text-slate-400">포인트 이름
+        <input id="f-name" class="field mt-1" required maxlength="40" placeholder="예: 영일대 남측 테트라" />
+      </label>
+      <label class="block text-[11px] text-slate-400">공략 어종
+        <input id="f-species" class="field mt-1" maxlength="40" placeholder="예: 감성돔, 학공치" />
+      </label>
+      <div class="grid grid-cols-2 gap-2">
+        <label class="block text-[11px] text-slate-400">수심
+          <input id="f-depth" class="field mt-1" maxlength="20" placeholder="예: 3~4m" />
+        </label>
+        <label class="flex items-end gap-2 text-[13px] text-slate-200 pb-2">
+          <input id="f-snag" type="checkbox" class="w-4 h-4 accent-amber-400" />
+          밑걸림 주의
+        </label>
+      </div>
+      <label class="block text-[11px] text-slate-400">메모
+        <textarea id="f-memo" class="field mt-1 min-h-[72px]" maxlength="200" placeholder="입질 시간, 밑밥, 주차, 주의사항"></textarea>
+      </label>
+      <button type="submit" class="w-full rounded-xl bg-cyan-400 text-sea-950 font-bold py-3 active:scale-[.99]">이 기기에 저장</button>
+      <p class="text-[10px] text-slate-500 text-center">로그인 없이 이 스마트폰(브라우저)에만 보관됩니다.</p>
+    </form>
+  </div>
 
   <script>
     const API_BASE = (window.location && window.location.origin) ? window.location.origin : "";
@@ -144,7 +243,12 @@
     }
 
     const PEEK = 176, HALF = Math.round(window.innerHeight * 0.52), FULL = Math.round(window.innerHeight * 0.88);
-    const state = { data: null, selected: null, map: null, overlays: {}, kakaoReady: false, sheet: PEEK };
+    const MINE_KEY = "yunfish.myPoints.v1";
+    const state = {
+      data: null, selected: null, selectedKind: "official", tab: "official",
+      map: null, overlays: {}, mineOverlays: {}, gpsOverlay: null, myPos: null,
+      kakaoReady: false, sheet: PEEK, mine: [],
+    };
 
     const $ = (id) => document.getElementById(id);
     const setSheet = (h, animate = true) => {
@@ -152,6 +256,7 @@
       const el = $("sheet");
       if (!animate) el.classList.add("dragging");
       el.style.height = h + "px";
+      document.documentElement.style.setProperty("--sheet-h", h + "px");
       if (animate) el.classList.remove("dragging");
     };
 
@@ -162,10 +267,102 @@
 
     const badgeClass = (level) => ({ safe: "badge-safe", caution: "badge-caution", danger: "badge-danger" }[level] || "badge-safe");
 
+    function toast(msg) {
+      const el = $("toast");
+      el.textContent = msg;
+      el.style.display = "block";
+      clearTimeout(toast._t);
+      toast._t = setTimeout(() => { el.style.display = "none"; }, 2600);
+    }
+
+    function loadMine() {
+      try { return JSON.parse(localStorage.getItem(MINE_KEY) || "[]"); } catch { return []; }
+    }
+    function persistMine() {
+      localStorage.setItem(MINE_KEY, JSON.stringify(state.mine));
+    }
+
+    function todayAt(hhmm) {
+      const [h, m] = String(hhmm || "00:00").split(":").map(Number);
+      const d = new Date();
+      d.setHours(h || 0, m || 0, 0, 0);
+      return d;
+    }
+
+    function computeTideState(events) {
+      const now = new Date();
+      if (!events || !events.length) {
+        return { phase: "unknown", phase_label: "-", badge: "조석 정보 없음", countdown: "-", progress: 0, next_kind: null };
+      }
+      const timed = events.map((ev) => ({ ...ev, dt: todayAt(ev.time) })).sort((a, b) => a.dt - b.dt);
+      let prev = null, nxt = null;
+      timed.forEach((ev) => {
+        if (ev.dt <= now) prev = ev;
+        else if (!nxt) nxt = ev;
+      });
+      if (!prev) {
+        nxt = timed[0];
+        const fake = new Date(nxt.dt.getTime() - (6 * 60 + 13) * 60000);
+        prev = { type: nxt.type === "고조" ? "저조" : "고조", dt: fake };
+      }
+      if (!nxt) {
+        const first = timed[0];
+        nxt = { type: prev.type === "고조" ? "저조" : "고조", dt: new Date(first.dt.getTime() + 24 * 3600000), time: first.time };
+      }
+      const flood = prev.type === "저조";
+      const nextKind = nxt.type === "고조" ? "만조" : "간조";
+      const mins = Math.max(0, Math.round((nxt.dt - now) / 60000));
+      const hours = Math.floor(mins / 60);
+      const minutes = mins % 60;
+      const countdown = hours ? `${nextKind}까지 ${hours}시간 ${minutes}분 전` : `${nextKind}까지 ${minutes}분 전`;
+      const span = (nxt.dt - prev.dt) || 1;
+      return {
+        phase: flood ? "flood" : "ebb",
+        phase_label: flood ? "들물" : "날물",
+        badge: flood ? "🌊 들물 진행 중" : "🌙 날물 진행 중",
+        countdown,
+        next_kind: nextKind,
+        next_time: nxt.time || String(nxt.dt.getHours()).padStart(2, "0") + ":" + String(nxt.dt.getMinutes()).padStart(2, "0"),
+        minutes_left: mins,
+        progress: Math.max(0, Math.min(1, (now - prev.dt) / span)),
+      };
+    }
+
+    function tideStateOf(p) {
+      return p?.tide?.progress || p?.tide?.state || state.data?.tide_progress || computeTideState(p?.tide?.events || []);
+    }
+
+    function nearestOfficial(lat, lng) {
+      const points = state.data?.points || [];
+      if (!points.length) return null;
+      let best = points[0], bestD = Infinity;
+      points.forEach((p) => {
+        const d = (p.lat - lat) ** 2 + (p.lng - lng) ** 2;
+        if (d < bestD) { bestD = d; best = p; }
+      });
+      return best;
+    }
+
+    function setTab(tab) {
+      state.tab = tab;
+      $("tab-official").className = "flex-1 rounded-lg py-1.5 text-[12px] font-bold " + (tab === "official" ? "bg-cyan-400 text-sea-950" : "text-slate-300");
+      $("tab-mine").className = "flex-1 rounded-lg py-1.5 text-[12px] font-bold " + (tab === "mine" ? "bg-amber-400 text-sea-950" : "text-slate-300");
+      renderChips();
+      renderCard();
+    }
+
     function renderChips() {
       const wrap = $("chips");
+      if (state.tab === "mine") {
+        wrap.innerHTML = (state.mine || []).map((p) => {
+          const on = state.selectedKind === "mine" && state.selected === p.id;
+          return `<button data-id="${p.id}" class="chip shrink-0 rounded-full px-3 py-1.5 text-[12px] font-semibold border ${on ? "bg-amber-400 text-sea-950 border-amber-300" : "bg-white/5 border-white/10 text-slate-200"}">⭐ ${p.name}</button>`;
+        }).join("") || `<span class="text-[12px] text-slate-500 px-1">아직 저장한 포인트가 없습니다.</span>`;
+        wrap.querySelectorAll("button").forEach((btn) => btn.addEventListener("click", () => selectMine(btn.dataset.id, true)));
+        return;
+      }
       wrap.innerHTML = (state.data?.points || []).map((p) => {
-        const on = state.selected === p.id;
+        const on = state.selectedKind === "official" && state.selected === p.id;
         return `<button data-id="${p.id}" class="chip shrink-0 rounded-full px-3 py-1.5 text-[12px] font-semibold border ${on ? "bg-cyan-400 text-sea-950 border-cyan-300" : "bg-white/5 border-white/10 text-slate-200"}">
           <span class="inline-block w-1.5 h-1.5 rounded-full mr-1 ${p.alert.level === "safe" ? "bg-emerald-400" : p.alert.level === "caution" ? "bg-amber-400" : "bg-rose-400"}"></span>${p.short_name}
         </button>`;
@@ -200,7 +397,46 @@
       return Number.isFinite(n) ? n : fallback;
     }
 
+    function tideTimeline(p) {
+      const events = p.tide?.events || [];
+      const st = tideStateOf(p);
+      const flood = st.phase === "flood";
+      const rows = events.map((t) => {
+        const kind = t.type === "고조" ? "만조" : "간조";
+        const cm = t.height_cm != null ? t.height_cm + "cm" : (t.height != null ? t.height + "m" : "");
+        const isNext = st.next_time === t.time;
+        return `<div class="relative flex items-center gap-3 py-1.5">
+          <div class="relative z-[1] w-3.5 h-3.5 rounded-full border-2 shrink-0 ${t.type === "고조" ? "bg-sky-400 border-sky-100" : "bg-slate-400 border-slate-200"} ${isNext ? "ring-2 ring-amber-300 ring-offset-1 ring-offset-transparent" : ""}"></div>
+          <div class="flex-1 flex items-baseline justify-between gap-2">
+            <span class="text-[13px] font-semibold ${t.type === "고조" ? "text-sky-200" : "text-slate-300"}">${kind}</span>
+            <span class="text-[13px] tabular-nums font-bold">${t.time} <span class="text-[11px] font-medium text-cyan-200/80">${cm}</span></span>
+          </div>
+        </div>`;
+      }).join("");
+      const pct = Math.round((st.progress || 0) * 100);
+      return `
+        <div class="rounded-2xl border border-cyan-300/20 bg-gradient-to-b from-sky-500/10 to-white/[.03] p-3 mb-3">
+          <div class="flex items-center justify-between gap-2 mb-2">
+            <div class="text-[11px] font-semibold text-slate-400">오늘 간조 · 만조 · 포항</div>
+            <span class="text-[11px] font-bold rounded-full px-2 py-0.5 border ${flood ? "bg-sky-500/20 text-sky-100 border-sky-300/40" : "bg-indigo-500/15 text-indigo-100 border-indigo-300/35"}">${st.badge || "조석"}</span>
+          </div>
+          <div class="text-[14px] font-bold text-cyan-50 mb-3">${st.countdown || ""}</div>
+          <div class="relative pl-1 mb-3">
+            <div class="absolute left-[6px] top-2 bottom-2 w-px bg-white/15"></div>
+            ${rows || `<span class="text-[12px] text-slate-500">조석 데이터 없음</span>`}
+          </div>
+          <div class="h-1.5 rounded-full bg-white/10 overflow-hidden">
+            <div class="h-full rounded-full ${flood ? "bg-sky-400" : "bg-indigo-300"}" style="width:${pct}%"></div>
+          </div>
+          <div class="text-[10px] text-slate-500 mt-1.5">${st.phase_label || ""} 진행 ${pct}% · 다음 ${st.next_kind || "-"} ${st.next_time || ""}</div>
+        </div>`;
+    }
+
     function renderCard() {
+      if (state.tab === "mine") {
+        renderMineCard();
+        return;
+      }
       const points = state.data?.points || [];
       const p = points.find((x) => x.id === state.selected) || points[0];
       if (!p) {
@@ -213,15 +449,6 @@
       const mulText = mulDisplay(p);
       const sst = numOr(w.water_temp ?? w.sst ?? w.waterTemp, 22.4);
       const pop = numOr(w.pop ?? w.POP, 10);
-      const tideChips = (p.tide?.events || []).map((t) => {
-        const kind = t.type === "고조" ? "만조" : "간조";
-        const cm = t.height_cm != null ? t.height_cm + "cm" : (t.height != null ? t.height + "m" : "");
-        return `<div class="rounded-xl border ${t.type === "고조" ? "tide-hi bg-sky-500/10" : "tide-lo bg-white/5"} px-2.5 py-2 text-center min-w-[72px] flex-1">
-          <div class="text-[10px] text-slate-400">${kind}</div>
-          <div class="text-[15px] font-bold tabular-nums tracking-tight">${t.time}</div>
-          <div class="text-[10px] text-cyan-200/80">${cm}</div>
-        </div>`;
-      }).join("");
       $("card").innerHTML = `
         <div class="flex items-start justify-between gap-2 mb-2">
           <div>
@@ -242,17 +469,78 @@
           ${metric("강수확률", pop + "%", w.pty && w.pty !== "없음" ? w.pty : "예보")}
           ${metric("물때", mulText, mul.phase_note || mulPhase)}
         </div>
-        <div class="text-[11px] font-semibold text-slate-400 mb-1.5">오늘 만조 · 간조</div>
-        <div class="flex gap-1.5 overflow-x-auto hide-scroll mb-3">${tideChips || `<span class="text-[12px] text-slate-500">조석 데이터 없음</span>`}</div>
+        ${tideTimeline(p)}
         <div class="text-[11px] font-semibold text-slate-400 mb-1.5">오늘 추천 어종</div>
         <div class="flex flex-wrap gap-1.5 mb-3">
           ${(p.today_species || []).map((s) => `<span class="tag text-[12px] font-semibold px-2.5 py-1 rounded-full">#${s}</span>`).join("")}
         </div>
-        <div class="text-[11px] font-semibold text-slate-400 mb-1.5">추천 출조 시간대</div>
+        <div class="text-[11px] font-semibold text-slate-400 mb-1.5">황금 물때 시간대 (피딩 · 물돌이)</div>
         <div class="space-y-1.5 mb-3">${(p.windows || []).map(windowRow).join("")}</div>
         <p class="text-[12px] text-slate-400 leading-relaxed">${p.tip}</p>
         <p class="text-[10px] text-slate-500 mt-3">날씨 ${p.data_source.weather} · 조석 ${p.data_source.tide} · 부이 ${p.data_source.buoy || "-"} · 30분 캐시</p>
       `;
+    }
+
+    function weatherMini(w, alert) {
+      if (!w) return "";
+      return `
+        <div class="grid grid-cols-3 gap-2 mb-3">
+          ${metric("기온", (w.temp ?? "-") + (w.temp != null ? "°" : ""), w.sky || "")}
+          ${metric("풍속", (w.wind_speed ?? "-") + (w.wind_speed != null ? "m/s" : ""), w.wind_dir || "")}
+          ${metric("파고", (w.wave_height ?? "-") + (w.wave_height != null ? "m" : ""), alert?.label || "")}
+        </div>`;
+    }
+
+    function renderMineCard() {
+      const list = state.mine || [];
+      if (!list.length) {
+        $("card").innerHTML = `<div class="rounded-2xl border border-white/10 bg-white/5 p-4 text-center">
+          <div class="text-[28px] mb-1">⭐</div>
+          <p class="text-[14px] font-bold">저장된 내 포인트가 없습니다</p>
+          <p class="text-[12px] text-slate-400 mt-1">우측 GPS 버튼으로 현재 위치를 잡은 뒤<br/>「이 위치를 포인트로 저장」하세요.</p>
+        </div>`;
+        return;
+      }
+      const mine = list.find((x) => x.id === state.selected) || list[0];
+      const near = nearestOfficial(mine.lat, mine.lng);
+      const w = near?.weather || {};
+      const st = near ? tideStateOf(near) : {};
+      $("card").innerHTML = `
+        <div class="flex items-start justify-between gap-2 mb-2">
+          <div>
+            <div class="text-[11px] text-amber-200/80">나만의 포인트 · ${mine.lat.toFixed(5)}, ${mine.lng.toFixed(5)}</div>
+            <h2 class="text-[20px] font-bold leading-tight mt-0.5">⭐ ${mine.name}</h2>
+          </div>
+          <button data-del="${mine.id}" class="text-[11px] font-bold px-2 py-1 rounded-full bg-rose-500/15 text-rose-200 border border-rose-400/30">삭제</button>
+        </div>
+        ${mine.species ? `<div class="flex flex-wrap gap-1.5 mb-2">${mine.species.split(/[,/，、]/).filter(Boolean).map((s) => `<span class="tag text-[12px] font-semibold px-2.5 py-1 rounded-full">#${s.trim()}</span>`).join("")}</div>` : ""}
+        <div class="rounded-xl border border-amber-300/25 bg-amber-400/10 px-3 py-2 mb-3">
+          <div class="text-[11px] text-amber-200/80 mb-0.5">내가 적은 메모</div>
+          <p class="text-[13px] text-amber-50">${mine.memo ? escapeHtml(mine.memo) : "메모 없음"}</p>
+          <div class="text-[11px] text-slate-400 mt-1.5">${mine.depth ? "수심 " + escapeHtml(mine.depth) : "수심 미입력"} · ${mine.snag ? "⚠️ 밑걸림 주의" : "밑걸림 없음"}</div>
+        </div>
+        <div class="text-[11px] font-semibold text-slate-400 mb-1.5">현재 이 위치 날씨 ${near ? "· " + near.short_name + " 기준" : ""}</div>
+        ${weatherMini(w, near?.alert)}
+        ${near ? `<div class="text-[12px] text-cyan-100 mb-3">${st.badge || ""} · ${st.countdown || ""}</div>` : ""}
+        ${near ? tideTimeline(near) : ""}
+        <div class="text-[11px] font-semibold text-slate-400 mb-1.5">등록된 내 포인트</div>
+        <div class="space-y-1.5">
+          ${list.map((item) => `
+            <div class="flex items-center gap-2 rounded-xl border ${item.id === mine.id ? "border-amber-300/40 bg-amber-400/10" : "border-white/10 bg-white/5"} px-3 py-2">
+              <button data-pick="${item.id}" class="flex-1 text-left min-w-0">
+                <div class="text-[13px] font-bold truncate">⭐ ${escapeHtml(item.name)}</div>
+                <div class="text-[11px] text-slate-400 truncate">${escapeHtml(item.species || "어종 미입력")} · ${escapeHtml(item.memo || "메모 없음")}</div>
+              </button>
+              <button data-del="${item.id}" class="text-[11px] text-rose-300 shrink-0">삭제</button>
+            </div>`).join("")}
+        </div>
+      `;
+      $("card").querySelectorAll("[data-pick]").forEach((b) => b.addEventListener("click", () => selectMine(b.dataset.pick, true)));
+      $("card").querySelectorAll("[data-del]").forEach((b) => b.addEventListener("click", () => deleteMine(b.dataset.del)));
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
     }
 
     function metric(label, value, sub) {
@@ -265,13 +553,28 @@
 
     function selectPoint(id, pan = false) {
       state.selected = id;
-      renderChips();
-      renderCard();
+      state.selectedKind = "official";
+      if (state.tab !== "official") setTab("official");
+      else { renderChips(); renderCard(); }
       highlightMarkers();
       if (state.sheet < HALF) setSheet(HALF);
       const p = state.data.points.find((x) => x.id === id);
       if (pan && p && state.map && window.kakao) {
         state.map.panTo(new kakao.maps.LatLng(p.lat, p.lng));
+      }
+    }
+
+    function selectMine(id, pan = false) {
+      state.selected = id;
+      state.selectedKind = "mine";
+      if (state.tab !== "mine") setTab("mine");
+      else { renderChips(); renderCard(); }
+      highlightMarkers();
+      if (state.sheet < HALF) setSheet(HALF);
+      const p = state.mine.find((x) => x.id === id);
+      if (pan && p && state.map && window.kakao) {
+        state.map.panTo(new kakao.maps.LatLng(p.lat, p.lng));
+        state.map.setLevel(5);
       }
     }
 
@@ -281,11 +584,18 @@
         if (typeof el === "string") return;
         const pin = el.querySelector(".pin");
         if (!pin) return;
-        pin.classList.toggle("pin-on", id === state.selected);
+        pin.classList.toggle("pin-on", state.selectedKind === "official" && id === state.selected);
+      });
+      Object.entries(state.mineOverlays).forEach(([id, ov]) => {
+        const el = ov.getContent();
+        if (typeof el === "string") return;
+        const pin = el.querySelector(".pin-mine");
+        if (!pin) return;
+        pin.classList.toggle("pin-on", state.selectedKind === "mine" && id === state.selected);
       });
     }
 
-    function drawMarkers() {
+    function drawOfficialMarkers() {
       if (!state.map || !window.kakao) return;
       Object.values(state.overlays).forEach((ov) => ov.setMap(null));
       state.overlays = {};
@@ -304,6 +614,49 @@
         overlay.setMap(state.map);
         state.overlays[p.id] = overlay;
       });
+    }
+
+    function drawMineMarkers() {
+      if (!state.map || !window.kakao) return;
+      Object.values(state.mineOverlays).forEach((ov) => ov.setMap(null));
+      state.mineOverlays = {};
+      (state.mine || []).forEach((p) => {
+        const wrap = document.createElement("div");
+        wrap.className = "pin-wrap";
+        wrap.innerHTML = `<div class="pin-mine">⭐</div><div class="pin-label">${p.name}</div>`;
+        wrap.addEventListener("click", (e) => { e.stopPropagation(); selectMine(p.id, false); });
+        const overlay = new kakao.maps.CustomOverlay({
+          position: new kakao.maps.LatLng(p.lat, p.lng),
+          content: wrap,
+          yAnchor: 0.5,
+          xAnchor: 0.5,
+          zIndex: 6,
+        });
+        overlay.setMap(state.map);
+        state.mineOverlays[p.id] = overlay;
+      });
+    }
+
+    function drawGpsPin() {
+      if (!state.map || !window.kakao || !state.myPos) return;
+      if (state.gpsOverlay) state.gpsOverlay.setMap(null);
+      const wrap = document.createElement("div");
+      wrap.className = "pin-wrap";
+      wrap.innerHTML = `<div class="pulse-pin"></div><div class="pin-label">내 위치</div>`;
+      state.gpsOverlay = new kakao.maps.CustomOverlay({
+        position: new kakao.maps.LatLng(state.myPos.lat, state.myPos.lng),
+        content: wrap,
+        yAnchor: 0.5,
+        xAnchor: 0.5,
+        zIndex: 8,
+      });
+      state.gpsOverlay.setMap(state.map);
+    }
+
+    function drawMarkers() {
+      drawOfficialMarkers();
+      drawMineMarkers();
+      drawGpsPin();
       highlightMarkers();
     }
 
@@ -368,11 +721,94 @@
       }
     }
 
+    function locateMe() {
+      if (!navigator.geolocation) {
+        toast("이 브라우저는 위치 정보를 지원하지 않습니다.");
+        return;
+      }
+      toast("현재 위치를 찾는 중…");
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          state.myPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          $("btn-save-here").classList.remove("hidden");
+          if (state.map && window.kakao) {
+            const latlng = new kakao.maps.LatLng(state.myPos.lat, state.myPos.lng);
+            state.map.setLevel(5);
+            state.map.panTo(latlng);
+            drawGpsPin();
+          }
+          toast("현 위치를 표시했습니다.");
+        },
+        (err) => {
+          const msg = err.code === 1 ? "위치 권한이 거부되었습니다." : "위치를 가져오지 못했습니다.";
+          toast(msg);
+        },
+        { enableHighAccuracy: true, timeout: 12000, maximumAge: 20000 }
+      );
+    }
+
+    function openSaveModal() {
+      if (!state.myPos) {
+        toast("먼저 내 위치(GPS)를 눌러 주세요.");
+        locateMe();
+        return;
+      }
+      $("save-coords").textContent = `${state.myPos.lat.toFixed(6)}, ${state.myPos.lng.toFixed(6)}`;
+      $("f-name").value = "";
+      $("f-species").value = "";
+      $("f-depth").value = "";
+      $("f-memo").value = "";
+      $("f-snag").checked = false;
+      $("save-modal").classList.add("open");
+      setTimeout(() => $("f-name").focus(), 50);
+    }
+
+    function closeSaveModal() {
+      $("save-modal").classList.remove("open");
+    }
+
+    function saveMinePoint(e) {
+      e.preventDefault();
+      if (!state.myPos) return;
+      const item = {
+        id: "mine-" + Date.now(),
+        name: $("f-name").value.trim(),
+        species: $("f-species").value.trim(),
+        depth: $("f-depth").value.trim(),
+        memo: $("f-memo").value.trim(),
+        snag: $("f-snag").checked,
+        lat: state.myPos.lat,
+        lng: state.myPos.lng,
+        createdAt: new Date().toISOString(),
+      };
+      if (!item.name) { toast("포인트 이름을 입력하세요."); return; }
+      state.mine = [item, ...state.mine];
+      persistMine();
+      closeSaveModal();
+      drawMineMarkers();
+      selectMine(item.id, true);
+      toast("내 포인트가 이 기기에 저장되었습니다.");
+    }
+
+    function deleteMine(id) {
+      if (!confirm("이 포인트를 삭제할까요?")) return;
+      state.mine = state.mine.filter((p) => p.id !== id);
+      persistMine();
+      if (state.selected === id) state.selected = state.mine[0]?.id || null;
+      drawMineMarkers();
+      renderChips();
+      renderCard();
+      toast("포인트를 삭제했습니다.");
+    }
+
     async function loadData(refresh = false) {
       const path = refresh ? "/api/recommend?refresh=true" : "/api/recommend";
       state.data = await apiGet(path);
       $("subhead").textContent = `${fmtDate(state.data.date)} · ${state.data.summary.headline}`;
-      if (!state.selected) state.selected = state.data.points[0]?.id;
+      if (!state.selected) {
+        state.selected = state.data.points[0]?.id;
+        state.selectedKind = "official";
+      }
       renderChips();
       renderCard();
       if (state.kakaoReady) drawMarkers();
@@ -403,8 +839,32 @@
       $("subhead").textContent = "다시 계산하는 중…";
       try { await loadData(true); } catch { $("subhead").textContent = "갱신 실패 · 네트워크를 확인하세요"; }
     });
+    $("tab-official").addEventListener("click", () => {
+      state.tab = "official";
+      if (state.selectedKind !== "official") {
+        state.selected = state.data?.points?.[0]?.id;
+        state.selectedKind = "official";
+      }
+      setTab("official");
+      highlightMarkers();
+    });
+    $("tab-mine").addEventListener("click", () => {
+      state.tab = "mine";
+      if (state.mine[0] && state.selectedKind !== "mine") {
+        state.selected = state.mine[0].id;
+        state.selectedKind = "mine";
+      }
+      setTab("mine");
+      highlightMarkers();
+    });
+    $("btn-gps").addEventListener("click", locateMe);
+    $("btn-save-here").addEventListener("click", openSaveModal);
+    $("save-backdrop").addEventListener("click", closeSaveModal);
+    $("save-close").addEventListener("click", closeSaveModal);
+    $("save-form").addEventListener("submit", saveMinePoint);
 
     (async function boot() {
+      state.mine = loadMine();
       setSheet(PEEK);
       bindSheetDrag();
       try {

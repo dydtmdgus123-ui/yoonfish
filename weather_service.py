@@ -549,6 +549,84 @@ async def fetch_khoa_tide(day: date) -> list[dict[str, Any]] | None:
 # ---------------------------------------------------------------------------
 # 추천 알고리즘
 # ---------------------------------------------------------------------------
+def tide_progress(events: list[dict[str, Any]], now: datetime | None = None) -> dict[str, Any]:
+    """현재가 들물/날물인지, 다음 만·간조까지 남은 시간을 계산."""
+    now = now or now_kst()
+    day = now.date()
+    if not events:
+        return {
+            "phase": "unknown",
+            "phase_label": "-",
+            "badge": "조석 정보 없음",
+            "countdown": "-",
+            "next_type": None,
+            "next_time": None,
+            "minutes_left": None,
+            "progress": 0,
+        }
+
+    timed: list[dict[str, Any]] = []
+    for ev in events:
+        try:
+            timed.append({**ev, "dt": _parse_hhmm(day, ev["time"])})
+        except Exception:
+            continue
+    timed.sort(key=lambda x: x["dt"])
+    if not timed:
+        return {
+            "phase": "unknown",
+            "phase_label": "-",
+            "badge": "조석 정보 없음",
+            "countdown": "-",
+            "next_type": None,
+            "next_time": None,
+            "minutes_left": None,
+            "progress": 0,
+        }
+
+    prev = None
+    nxt = None
+    for ev in timed:
+        if ev["dt"] <= now:
+            prev = ev
+        elif nxt is None:
+            nxt = ev
+    if prev is None:
+        nxt = timed[0]
+        prev_type = "저조" if nxt["type"] == "고조" else "고조"
+        prev = {**timed[-1], "type": prev_type, "dt": timed[0]["dt"] - timedelta(hours=6, minutes=13)}
+    if nxt is None:
+        nxt_type = "저조" if prev["type"] == "고조" else "고조"
+        nxt = {**timed[0], "type": nxt_type, "dt": timed[0]["dt"] + timedelta(days=1)}
+
+    flood = prev["type"] == "저조"
+    phase = "flood" if flood else "ebb"
+    phase_label = "들물" if flood else "날물"
+    badge = "🌊 들물 진행 중" if flood else "🌙 날물 진행 중"
+    next_kind = "만조" if nxt["type"] == "고조" else "간조"
+    mins = max(0, int((nxt["dt"] - now).total_seconds() // 60))
+    hours, minutes = divmod(mins, 60)
+    countdown = (
+        f"{next_kind}까지 {hours}시간 {minutes}분 전" if hours else f"{next_kind}까지 {minutes}분 전"
+    )
+    span = (nxt["dt"] - prev["dt"]).total_seconds() or 1
+    elapsed = (now - prev["dt"]).total_seconds()
+    progress = max(0.0, min(1.0, elapsed / span))
+    return {
+        "phase": phase,
+        "phase_label": phase_label,
+        "badge": badge,
+        "countdown": countdown,
+        "next_type": nxt["type"],
+        "next_kind": next_kind,
+        "next_time": nxt["dt"].strftime("%H:%M"),
+        "minutes_left": mins,
+        "progress": round(progress, 3),
+        "from_type": prev["type"],
+        "from_time": prev["dt"].strftime("%H:%M"),
+    }
+
+
 def compute_alert(weather: dict[str, Any]) -> dict[str, str]:
     wind = float(weather.get("wind_speed") or 0)
     wave = float(weather.get("wave_height") or 0)
@@ -694,6 +772,7 @@ async def build_recommendation(force_refresh: bool = False) -> dict[str, Any]:
         for point in POINTS:
             weather = _compose_weather(point, dt, village, buoy)
             tides = live_tides if live_tides else mock_tide(day, point["id"])
+            progress = tide_progress(tides, dt)
             wsrc = weather.get("source", "mock")
             sources.add(wsrc)
             sources.add(tide_src)
@@ -714,6 +793,8 @@ async def build_recommendation(force_refresh: bool = False) -> dict[str, Any]:
                     "source": tide_src,
                     "station": KHOA_POHANG_OBS,
                     "mul": mul,
+                    "progress": progress,
+                    "state": progress,
                 },
                 "sun": {"sunrise": sun["sunrise"], "sunset": sun["sunset"]},
                 "today_species": today_species(point, month, limit=4),
@@ -732,6 +813,7 @@ async def build_recommendation(force_refresh: bool = False) -> dict[str, Any]:
             "month": month,
             "season": SEASON_KO[season],
             "mul": mul,
+            "tide_progress": points_out[0]["tide"]["progress"] if points_out else None,
             "source": "live" if used_live else "mock",
             "sources": sorted(sources),
             "summary": {
