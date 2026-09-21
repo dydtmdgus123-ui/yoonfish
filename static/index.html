@@ -58,6 +58,13 @@
     .pin-label-danger { background: #EF4444; color: #fff; }
     .pin-label-mine { background: #F59E0B; color: #1c1917; }
     .pin-label-gps { background: #38bdf8; color: #082f49; }
+    .pin-label-search { background: #7c3aed; color: #fff; }
+    .pin-search {
+      width: 18px; height: 18px; border-radius: 999px; transform: translate(-50%, -50%);
+      background: #a78bfa; border: 3px solid #fff;
+      box-shadow: 0 0 0 0 rgba(167,139,250,.65);
+      animation: gps-pulse 1.6s ease-out infinite;
+    }
     .pin-on { width: 26px; height: 26px; outline: 3px solid rgba(255,255,255,.85); }
     .pin-mine {
       width: 22px; height: 22px; border-radius: 7px; transform: translate(-50%, -50%);
@@ -114,6 +121,47 @@
       border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.35);
     }
     .legend-star { font-size: 14px; line-height: 1; }
+    .search-wrap { position: relative; margin: 10px 12px 0; z-index: 24; }
+    .search-box {
+      display: flex; align-items: center; gap: 8px;
+      min-height: 44px; padding: 0 12px; border-radius: 16px;
+      background: rgba(15, 23, 42, 0.92);
+      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255,255,255,.16);
+      box-shadow: 0 8px 22px rgba(0,0,0,.28);
+    }
+    .search-box input {
+      flex: 1; min-width: 0; background: transparent; border: 0;
+      color: #f8fafc; font-size: 14px; font-weight: 600; outline: none;
+    }
+    .search-box input::placeholder { color: #94a3b8; font-weight: 500; }
+    #search-results {
+      display: none; position: absolute; left: 0; right: 0; top: calc(100% + 6px);
+      max-height: 42vh; overflow-y: auto; border-radius: 16px;
+      background: rgba(15, 23, 42, 0.96);
+      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255,255,255,.14);
+      box-shadow: 0 12px 32px rgba(0,0,0,.4); z-index: 40;
+    }
+    #search-results.open { display: block; }
+    .search-hit {
+      width: 100%; text-align: left; padding: 10px 12px;
+      border: 0; border-bottom: 1px solid rgba(255,255,255,.06);
+      background: transparent; color: #e2e8f0;
+    }
+    .search-hit:last-child { border-bottom: 0; }
+    .search-hit:active, .search-hit:hover { background: rgba(255,255,255,.06); }
+    #search-card {
+      display: none; position: fixed; left: 12px; right: 76px; z-index: 26;
+      bottom: calc(var(--sheet-h) + 16px);
+    }
+    #search-card.open { display: block; }
+    .sp-tag {
+      border-radius: 999px; padding: 6px 10px; font-size: 12px; font-weight: 800;
+      background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.12);
+      color: #e2e8f0;
+    }
+    .sp-tag.is-on { background: rgba(34,211,238,.22); border-color: rgba(34,211,238,.5); color: #a5f3fc; }
     #sheet {
       position: fixed; left: 0; right: 0; bottom: 0;
       height: var(--sheet-max);
@@ -146,13 +194,16 @@
     }
     #sheet.dragging ~ #fabs { transition: none; }
     .fab {
-      width: 46px; height: 46px; border-radius: 16px;
-      background: rgba(7, 20, 34, 0.82);
+      width: 56px; height: 56px; border-radius: 999px;
+      background: rgba(7, 20, 34, 0.88);
       backdrop-filter: blur(12px);
-      border: 1px solid rgba(255,255,255,.14);
-      color: #e0f2fe; box-shadow: 0 8px 24px rgba(0,0,0,.35);
+      border: 2px solid rgba(255,255,255,.2);
+      color: #e0f2fe; box-shadow: 0 8px 24px rgba(0,0,0,.4);
       display: grid; place-items: center;
+      font-size: 22px; font-weight: 800;
     }
+    .fab-gps { background: #0e7490; color: #fff; }
+    .fab-add { background: #f59e0b; color: #1c1917; }
     .fab:active { transform: scale(.95); }
     .chip { scroll-snap-align: start; }
     .chips { scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
@@ -238,16 +289,25 @@
         <span class="legend-star" aria-hidden="true">⭐</span>내포인트
       </button>
     </div>
+    <div class="search-wrap">
+      <form id="search-form" class="search-box" autocomplete="off">
+        <span aria-hidden="true">🔍</span>
+        <input id="place-search" type="search" enterkeyhint="search" placeholder="방파제·지명·도로명·지번 검색" />
+        <button type="submit" class="text-[12px] font-extrabold text-cyan-200 shrink-0">검색</button>
+      </form>
+      <div id="search-results" class="hide-scroll"></div>
+    </div>
   </header>
 
+  <div id="search-card" class="glass rounded-2xl border border-white/10 p-3 shadow-lg">
+    <div id="search-card-title" class="text-[14px] font-extrabold truncate"></div>
+    <div id="search-card-sub" class="text-[11px] text-slate-400 mt-0.5 truncate"></div>
+    <button type="button" id="btn-save-search" class="mt-2 w-full rounded-xl bg-amber-400 text-sea-950 text-[13px] font-extrabold py-2.5">📍 이 위치를 포인트로 저장</button>
+  </div>
+
   <div id="fabs">
-    <button id="btn-save-here" class="hidden glass rounded-full px-3 py-2 text-[12px] font-bold border border-amber-300/40 text-amber-100 shadow-lg">📍 이 위치를 포인트로 저장</button>
-    <button id="btn-gps" class="fab" aria-label="내 위치">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>
-        <circle cx="12" cy="12" r="8"/>
-      </svg>
-    </button>
+    <button id="btn-add" class="fab fab-add" aria-label="포인트 등록">➕</button>
+    <button id="btn-gps" class="fab fab-gps" aria-label="내 위치">🎯</button>
   </div>
   <div id="toast"></div>
 
@@ -277,9 +337,13 @@
       <label class="block text-[11px] text-slate-400">포인트 이름
         <input id="f-name" class="field mt-1" required maxlength="40" placeholder="예: 영일대 남측 테트라" />
       </label>
-      <label class="block text-[11px] text-slate-400">공략 어종
-        <input id="f-species" class="field mt-1" maxlength="40" placeholder="예: 감성돔, 학공치" />
-      </label>
+      <div>
+        <div class="text-[11px] text-slate-400 mb-1.5">오늘 추천 어종 · 터치해서 선택</div>
+        <div id="species-picks" class="flex flex-wrap gap-1.5 mb-1.5"></div>
+        <label class="block text-[11px] text-slate-400">공략 어종
+          <input id="f-species" class="field mt-1" maxlength="80" placeholder="태그를 누르거나 직접 입력" />
+        </label>
+      </div>
       <div class="grid grid-cols-2 gap-2">
         <label class="block text-[11px] text-slate-400">수심
           <input id="f-depth" class="field mt-1" maxlength="20" placeholder="예: 3~4m" />
@@ -314,12 +378,28 @@
     let FULL = Math.round(window.innerHeight * 0.88);
     const MINE_KEY = "yunfish.myPoints.v1";
     const ALERT_COLOR = { safe: "#10B981", caution: "#F59E0B", danger: "#EF4444" };
+    const POHANG = { lat: 36.05, lng: 129.45 };
+    const SEASON_TAGS = {
+      3: ["감성돔", "학꽁치", "볼락", "숭어", "도다리"],
+      4: ["감성돔", "학꽁치", "숭어", "농어"],
+      5: ["감성돔", "학꽁치", "전갱이", "농어"],
+      6: ["전갱이", "고등어", "농어", "학꽁치"],
+      7: ["전갱이", "고등어", "농어", "벵에돔"],
+      8: ["전갱이", "고등어", "무늬오징어", "농어"],
+      9: ["감성돔", "무늬오징어", "삼치", "전갱이", "갈치(풀치)", "학꽁치", "도다리"],
+      10: ["감성돔", "무늬오징어", "삼치", "볼락"],
+      11: ["감성돔", "볼락", "삼치", "무늬오징어"],
+      12: ["볼락", "우럭", "도다리", "가자미"],
+      1: ["볼락", "우럭", "도다리", "가자미"],
+      2: ["볼락", "도다리", "학꽁치", "우럭"],
+    };
     const state = {
       data: null, selected: null, selectedKind: "official", tab: "official",
-      map: null, overlays: {}, mineOverlays: {}, gpsOverlay: null, myPos: null,
-      kakaoReady: false, sheet: PEEK, mine: [],
+      map: null, overlays: {}, mineOverlays: {}, gpsOverlay: null, searchOverlay: null,
+      myPos: null, saveTarget: null, places: null, geocoder: null, gpsWatchId: null,
+      kakaoReady: false, sheet: PEEK, mine: [], pickedSpecies: new Set(),
       filters: { safe: true, caution: true, danger: true, mine: true },
-      overlayOn: {},
+      overlayOn: {}, searchSeq: 0,
     };
 
     const $ = (id) => document.getElementById(id);
@@ -669,7 +749,7 @@
         $("card").innerHTML = `<div class="rounded-2xl border border-white/10 bg-white/5 p-4 text-center">
           <div class="text-[28px] mb-1">⭐</div>
           <p class="text-[14px] font-bold">저장된 내 포인트가 없습니다</p>
-          <p class="text-[12px] text-slate-400 mt-1">우측 GPS 버튼으로 현재 위치를 잡은 뒤<br/>「이 위치를 포인트로 저장」하세요.</p>
+          <p class="text-[12px] text-slate-400 mt-1">검색 또는 GPS로 위치를 잡은 뒤<br/>우측 ➕ 버튼으로 바로 저장하세요.</p>
         </div>`;
         return;
       }
@@ -680,12 +760,15 @@
       $("card").innerHTML = `
         <div class="flex items-start justify-between gap-2 mb-2">
           <div>
-            <div class="text-[11px] text-amber-200/80">나만의 포인트 · ${mine.lat.toFixed(5)}, ${mine.lng.toFixed(5)}</div>
+            <div class="text-[11px] text-amber-200/80">나만의 포인트 · ${mine.address ? escapeHtml(mine.address) + " · " : ""}${mine.lat.toFixed(5)}, ${mine.lng.toFixed(5)}</div>
             <h2 class="text-[20px] font-bold leading-tight mt-0.5">⭐ ${mine.name}</h2>
           </div>
           <button data-del="${mine.id}" class="text-[11px] font-bold px-2 py-1 rounded-full bg-rose-500/15 text-rose-200 border border-rose-400/30">삭제</button>
         </div>
-        ${mine.species ? `<div class="flex flex-wrap gap-1.5 mb-2">${mine.species.split(/[,/，、]/).filter(Boolean).map((s) => `<span class="tag text-[12px] font-semibold px-2.5 py-1 rounded-full">#${s.trim()}</span>`).join("")}</div>` : ""}
+        ${mine.species ? `<div class="text-[11px] font-semibold text-slate-400 mb-1">내가 고른 어종</div>
+        <div class="flex flex-wrap gap-1.5 mb-2">${mine.species.split(/[,/，、]/).filter(Boolean).map((s) => `<span class="tag text-[12px] font-semibold px-2.5 py-1 rounded-full">#${escapeHtml(s.trim())}</span>`).join("")}</div>` : ""}
+        ${near?.today_species?.length ? `<div class="text-[11px] font-semibold text-slate-400 mb-1">이 위치 오늘 추천 어종</div>
+        <div class="flex flex-wrap gap-1.5 mb-3">${near.today_species.map((s) => `<span class="tag text-[12px] font-semibold px-2.5 py-1 rounded-full">#${s}</span>`).join("")}</div>` : ""}
         <div class="rounded-xl border border-amber-300/25 bg-amber-400/10 px-3 py-2 mb-3">
           <div class="text-[11px] text-amber-200/80 mb-0.5">내가 적은 메모</div>
           <p class="text-[13px] text-amber-50">${mine.memo ? escapeHtml(mine.memo) : "메모 없음"}</p>
@@ -901,7 +984,7 @@
     function loadKakaoSdk(kakaoKey) {
       return new Promise((resolve, reject) => {
         const s = document.createElement("script");
-        s.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${encodeURIComponent(kakaoKey)}&autoload=false`;
+        s.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${encodeURIComponent(kakaoKey)}&autoload=false&libraries=services`;
         const timer = setTimeout(() => reject(new Error("timeout")), 8000);
         s.onload = () => {
           clearTimeout(timer);
@@ -927,6 +1010,10 @@
         state.kakaoReady = true;
         const center = new kakao.maps.LatLng(36.05, 129.45);
         state.map = new kakao.maps.Map($("map"), { center, level: 10 });
+        if (kakao.maps.services) {
+          state.places = new kakao.maps.services.Places();
+          state.geocoder = new kakao.maps.services.Geocoder();
+        }
         drawMarkers();
         const bounds = new kakao.maps.LatLngBounds();
         state.data.points.forEach((p) => bounds.extend(new kakao.maps.LatLng(p.lat, p.lng)));
@@ -936,44 +1023,270 @@
       }
     }
 
+    function looksLikeAddress(q) {
+      return /\d/.test(q) && /(시|군|구|읍|면|동|리|로|길|가|번지|-)/.test(q);
+    }
+
+    function normKey(hit) {
+      return (Number(hit.lat).toFixed(5) + "," + Number(hit.lng).toFixed(5) + "|" + (hit.name || ""));
+    }
+
+    function dedupeHits(list) {
+      const seen = new Set();
+      const out = [];
+      list.forEach((hit) => {
+        if (!Number.isFinite(hit.lat) || !Number.isFinite(hit.lng)) return;
+        const k = normKey(hit);
+        if (seen.has(k)) return;
+        seen.add(k);
+        out.push(hit);
+      });
+      return out;
+    }
+
+    function localHits(q) {
+      const n = q.replace(/\s/g, "").toLowerCase();
+      const fromOfficial = (state.data?.points || []).filter((p) =>
+        (p.name + p.short_name + p.area).replace(/\s/g, "").toLowerCase().includes(n)
+      ).map((p) => ({
+        kind: "point", name: p.name, sub: p.area + " · 추천 포인트", lat: p.lat, lng: p.lng, pointId: p.id,
+      }));
+      const fromMine = (state.mine || []).filter((p) =>
+        (p.name + (p.species || "")).replace(/\s/g, "").toLowerCase().includes(n)
+      ).map((p) => ({
+        kind: "mine", name: p.name, sub: "내 포인트", lat: p.lat, lng: p.lng, pointId: p.id,
+      }));
+      return [...fromOfficial, ...fromMine];
+    }
+
+    function keywordSearchOnce(query) {
+      return new Promise((resolve) => {
+        if (!state.places) return resolve([]);
+        const loc = new kakao.maps.LatLng(POHANG.lat, POHANG.lng);
+        state.places.keywordSearch(query, (data, status) => {
+          if (status !== kakao.maps.services.Status.OK || !data) return resolve([]);
+          resolve(data.map((d) => ({
+            kind: "place",
+            name: d.place_name,
+            sub: d.road_address_name || d.address_name || "장소",
+            lat: Number(d.y),
+            lng: Number(d.x),
+          })));
+        }, { location: loc, radius: 40000, size: 10 });
+      });
+    }
+
+    function geocodeOnce(query) {
+      return new Promise((resolve) => {
+        if (!state.geocoder) return resolve([]);
+        state.geocoder.addressSearch(query, (data, status) => {
+          if (status !== kakao.maps.services.Status.OK || !data) return resolve([]);
+          resolve(data.map((d) => {
+            const road = d.road_address && d.road_address.address_name;
+            const jibun = (d.address && d.address.address_name) || d.address_name;
+            const isRoad = d.address_type === "ROAD" || d.address_type === "ROAD_ADDR" || !!road;
+            return {
+              kind: isRoad ? "road" : "jibun",
+              name: road || jibun,
+              sub: road && jibun && road !== jibun
+                ? (isRoad ? "도로명 · 지번 " + jibun : "지번 · 도로명 " + road)
+                : (isRoad ? "도로명 주소" : "지번 주소"),
+              lat: Number(d.y),
+              lng: Number(d.x),
+            };
+          }));
+        });
+      });
+    }
+
+    function hideSearchResults() {
+      const el = $("search-results");
+      if (el) el.classList.remove("open");
+    }
+
+    function kindLabel(kind) {
+      return ({ place: "장소", road: "도로명", jibun: "지번", point: "추천", mine: "내포인트" }[kind] || "검색");
+    }
+
+    function renderSearchResults(hits) {
+      const box = $("search-results");
+      if (!hits.length) {
+        box.innerHTML = `<div class="px-3 py-3 text-[12px] text-slate-400">검색 결과가 없습니다. 방파제 이름, 도로명, 지번을 입력해 보세요.</div>`;
+        box.classList.add("open");
+        return;
+      }
+      box.innerHTML = hits.slice(0, 12).map((h, i) => `
+        <button type="button" class="search-hit" data-i="${i}">
+          <div class="flex items-center gap-2">
+            <span class="text-[10px] font-extrabold px-1.5 py-0.5 rounded-md bg-white/10 text-cyan-200">${kindLabel(h.kind)}</span>
+            <span class="text-[13px] font-bold truncate">${escapeHtml(h.name)}</span>
+          </div>
+          <div class="text-[11px] text-slate-400 mt-0.5 truncate">${escapeHtml(h.sub || "")}</div>
+        </button>
+      `).join("");
+      box.classList.add("open");
+      box.querySelectorAll(".search-hit").forEach((btn) => {
+        btn.addEventListener("click", () => selectSearchHit(hits[Number(btn.dataset.i)]));
+      });
+    }
+
+    async function unifiedSearch(raw) {
+      const q = String(raw || "").trim();
+      if (q.length < 2) {
+        hideSearchResults();
+        return;
+      }
+      if (!state.places && !state.geocoder) {
+        const local = localHits(q);
+        renderSearchResults(local);
+        if (!local.length) toast("카카오 검색 서비스를 아직 쓸 수 없습니다. 지도를 연 뒤 다시 시도하세요.");
+        return;
+      }
+      const seq = ++state.searchSeq;
+      const queries = [q];
+      if (!/포항/.test(q)) queries.push("포항 " + q);
+      const [placesA, placesB, geoA, geoB] = await Promise.all([
+        keywordSearchOnce(queries[0]),
+        queries[1] ? keywordSearchOnce(queries[1]) : Promise.resolve([]),
+        geocodeOnce(queries[0]),
+        queries[1] ? geocodeOnce(queries[1]) : Promise.resolve([]),
+      ]);
+      if (seq !== state.searchSeq) return;
+      const addrFirst = looksLikeAddress(q);
+      const merged = dedupeHits(addrFirst
+        ? [...geoA, ...geoB, ...localHits(q), ...placesA, ...placesB]
+        : [...localHits(q), ...placesA, ...placesB, ...geoA, ...geoB]);
+      renderSearchResults(merged);
+    }
+
+    function drawSearchPin(hit) {
+      if (!state.map || !window.kakao) return;
+      if (state.searchOverlay) state.searchOverlay.setMap(null);
+      const wrap = document.createElement("div");
+      wrap.className = "pin-wrap";
+      wrap.innerHTML = `<div class="pin-search"></div><div class="pin-label pin-label-search">${escapeHtml(hit.name)}</div>`;
+      state.searchOverlay = new kakao.maps.CustomOverlay({
+        position: new kakao.maps.LatLng(hit.lat, hit.lng),
+        content: wrap,
+        yAnchor: 0.5,
+        xAnchor: 0.5,
+        zIndex: 9,
+      });
+      state.searchOverlay.setMap(state.map);
+    }
+
+    function showSearchCard(hit) {
+      $("search-card-title").textContent = hit.name;
+      $("search-card-sub").textContent = hit.sub || `${hit.lat.toFixed(5)}, ${hit.lng.toFixed(5)}`;
+      $("search-card").classList.add("open");
+      state.saveTarget = { lat: hit.lat, lng: hit.lng, name: hit.name, sub: hit.sub };
+    }
+
+    function selectSearchHit(hit) {
+      hideSearchResults();
+      if (hit.kind === "point") {
+        selectPoint(hit.pointId, true);
+      } else if (hit.kind === "mine") {
+        selectMine(hit.pointId, true);
+      }
+      if (state.map && window.kakao) {
+        const latlng = new kakao.maps.LatLng(hit.lat, hit.lng);
+        state.map.setLevel(4);
+        state.map.panTo(latlng);
+        drawSearchPin(hit);
+      }
+      showSearchCard(hit);
+      if (state.sheet > HALF) setSheet(PEEK);
+    }
+
+    function recommendedSpecies(lat, lng) {
+      const month = state.data?.month || (new Date().getMonth() + 1);
+      const near = (lat != null && lng != null) ? nearestOfficial(lat, lng) : (state.data?.points || [])[0];
+      const extras = SEASON_TAGS[month] || SEASON_TAGS[9];
+      const city = [];
+      (state.data?.points || []).forEach((p) => (p.today_species || []).forEach((s) => city.push(s)));
+      const seen = new Set();
+      const out = [];
+      [...(near?.today_species || []), ...extras, ...city].forEach((s) => {
+        if (!s || seen.has(s)) return;
+        seen.add(s);
+        out.push(s);
+      });
+      return out.slice(0, 8);
+    }
+
+    function renderSpeciesPicks(lat, lng) {
+      const wrap = $("species-picks");
+      if (!wrap) return;
+      const tags = recommendedSpecies(lat, lng);
+      wrap.innerHTML = tags.map((s) => `<button type="button" class="sp-tag" data-sp="${escapeHtml(s)}">#${escapeHtml(s)}</button>`).join("");
+      wrap.querySelectorAll("button").forEach((btn) => {
+        const name = btn.dataset.sp;
+        btn.classList.toggle("is-on", state.pickedSpecies.has(name));
+        btn.addEventListener("click", () => {
+          if (state.pickedSpecies.has(name)) state.pickedSpecies.delete(name);
+          else state.pickedSpecies.add(name);
+          btn.classList.toggle("is-on", state.pickedSpecies.has(name));
+          $("f-species").value = [...state.pickedSpecies].join(", ");
+        });
+      });
+    }
+
+    function mapCenterPos() {
+      if (!state.map || !window.kakao) return null;
+      const c = state.map.getCenter();
+      return { lat: c.getLat(), lng: c.getLng() };
+    }
+
     function locateMe() {
       if (!navigator.geolocation) {
         toast("이 브라우저는 위치 정보를 지원하지 않습니다.");
         return;
       }
+      const apply = (pos, announce) => {
+        state.myPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        if (state.map && window.kakao) {
+          const latlng = new kakao.maps.LatLng(state.myPos.lat, state.myPos.lng);
+          state.map.setLevel(5);
+          state.map.panTo(latlng);
+          drawGpsPin();
+        }
+        if (announce) toast("현 위치를 표시했습니다.");
+      };
       toast("현재 위치를 찾는 중…");
       navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          state.myPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-          $("btn-save-here").classList.remove("hidden");
-          if (state.map && window.kakao) {
-            const latlng = new kakao.maps.LatLng(state.myPos.lat, state.myPos.lng);
-            state.map.setLevel(5);
-            state.map.panTo(latlng);
-            drawGpsPin();
-          }
-          toast("현 위치를 표시했습니다.");
-        },
+        (pos) => apply(pos, true),
         (err) => {
           const msg = err.code === 1 ? "위치 권한이 거부되었습니다." : "위치를 가져오지 못했습니다.";
           toast(msg);
         },
         { enableHighAccuracy: true, timeout: 12000, maximumAge: 20000 }
       );
+      if (state.gpsWatchId == null) {
+        state.gpsWatchId = navigator.geolocation.watchPosition(
+          (pos) => apply(pos, false),
+          () => {},
+          { enableHighAccuracy: true, maximumAge: 8000, timeout: 20000 }
+        );
+      }
     }
 
-    function openSaveModal() {
-      if (!state.myPos) {
-        toast("먼저 내 위치(GPS)를 눌러 주세요.");
+    function openSaveModal(preset) {
+      const pos = preset || state.saveTarget || state.myPos || mapCenterPos();
+      if (!pos || pos.lat == null || pos.lng == null) {
+        toast("저장할 위치를 잡지 못했습니다. GPS 또는 검색을 먼저 해 주세요.");
         locateMe();
         return;
       }
-      $("save-coords").textContent = `${state.myPos.lat.toFixed(6)}, ${state.myPos.lng.toFixed(6)}`;
-      $("f-name").value = "";
+      state.saveTarget = { lat: pos.lat, lng: pos.lng, name: pos.name || "", sub: pos.sub || "" };
+      $("save-coords").textContent = `${state.saveTarget.sub ? state.saveTarget.sub + " · " : ""}${state.saveTarget.lat.toFixed(6)}, ${state.saveTarget.lng.toFixed(6)}`;
+      $("f-name").value = state.saveTarget.name || "";
       $("f-species").value = "";
       $("f-depth").value = "";
       $("f-memo").value = "";
       $("f-snag").checked = false;
+      state.pickedSpecies = new Set();
+      renderSpeciesPicks(state.saveTarget.lat, state.saveTarget.lng);
       $("save-modal").classList.add("open");
       setTimeout(() => $("f-name").focus(), 50);
     }
@@ -984,22 +1297,29 @@
 
     function saveMinePoint(e) {
       e.preventDefault();
-      if (!state.myPos) return;
+      const pos = state.saveTarget || state.myPos || mapCenterPos();
+      if (!pos) return;
+      const typed = $("f-species").value.trim();
+      const fromTags = [...state.pickedSpecies];
+      const species = typed || fromTags.join(", ");
       const item = {
         id: "mine-" + Date.now(),
-        name: $("f-name").value.trim(),
-        species: $("f-species").value.trim(),
+        name: $("f-name").value.trim() || pos.name || "내 포인트",
+        species,
         depth: $("f-depth").value.trim(),
         memo: $("f-memo").value.trim(),
         snag: $("f-snag").checked,
-        lat: state.myPos.lat,
-        lng: state.myPos.lng,
+        lat: pos.lat,
+        lng: pos.lng,
+        address: pos.sub || "",
         createdAt: new Date().toISOString(),
       };
       if (!item.name) { toast("포인트 이름을 입력하세요."); return; }
       state.mine = [item, ...state.mine];
       persistMine();
       closeSaveModal();
+      $("search-card").classList.remove("open");
+      hideSearchResults();
       drawMineMarkers();
       selectMine(item.id, true);
       toast("내 포인트가 이 기기에 저장되었습니다.");
@@ -1093,7 +1413,27 @@
       highlightMarkers();
     });
     $("btn-gps").addEventListener("click", locateMe);
-    $("btn-save-here").addEventListener("click", openSaveModal);
+    $("btn-add").addEventListener("click", () => {
+      const fromSearch = $("search-card").classList.contains("open") ? state.saveTarget : null;
+      openSaveModal(fromSearch || state.myPos || mapCenterPos());
+    });
+    $("btn-save-search").addEventListener("click", () => openSaveModal(state.saveTarget));
+    $("search-form").addEventListener("submit", (e) => {
+      e.preventDefault();
+      unifiedSearch($("place-search").value);
+    });
+    let searchTimer = 0;
+    $("place-search").addEventListener("input", () => {
+      clearTimeout(searchTimer);
+      const q = $("place-search").value;
+      searchTimer = setTimeout(() => unifiedSearch(q), 280);
+    });
+    $("place-search").addEventListener("focus", () => {
+      if ($("search-results").innerHTML) $("search-results").classList.add("open");
+    });
+    document.addEventListener("click", (e) => {
+      if (!e.target.closest(".search-wrap")) hideSearchResults();
+    });
     $("save-backdrop").addEventListener("click", closeSaveModal);
     $("save-close").addEventListener("click", closeSaveModal);
     $("save-form").addEventListener("submit", saveMinePoint);
