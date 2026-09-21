@@ -1,4 +1,4 @@
-const CACHE_NAME = "yunfish-v8";
+const CACHE_NAME = "yunfish-v9";
 const PRECACHE = [
   "/",
   "/manifest.json",

@@ -38,20 +38,27 @@
       -webkit-backdrop-filter: blur(16px);
     }
     .pin {
-      width: 18px; height: 18px; border-radius: 999px; border: 2px solid #fff;
-      box-shadow: 0 4px 12px rgba(0,0,0,.35); transform: translate(-50%, -50%);
+      width: 22px; height: 22px; border-radius: 999px; border: 3px solid #fff;
+      box-shadow: 0 4px 12px rgba(0,0,0,.45); transform: translate(-50%, -50%);
+      box-sizing: border-box;
     }
-    .pin-safe { background: #10b981; }
-    .pin-caution { background: #f59e0b; }
-    .pin-danger { background: #ef4444; }
-    .pin-wrap { position: relative; width: 0; height: 0; }
+    .pin-safe { background: #10B981 !important; }
+    .pin-caution { background: #F59E0B !important; }
+    .pin-danger { background: #EF4444 !important; animation: danger-pulse 1.45s ease-out infinite; }
+    .pin-wrap { position: relative; width: 22px; height: 22px; overflow: visible; }
     .pin-label {
-      position: absolute; left: 12px; top: -11px; white-space: nowrap;
-      font-size: 11px; font-weight: 700; color: #e2e8f0;
-      text-shadow: 0 1px 2px rgba(0,0,0,.7);
-      pointer-events: none;
+      position: absolute; left: 16px; top: -10px; white-space: nowrap;
+      font-size: 11px; font-weight: 800; letter-spacing: -0.02em;
+      padding: 2px 7px; border-radius: 999px; pointer-events: none;
+      border: 1px solid rgba(255,255,255,.55);
+      box-shadow: 0 2px 8px rgba(0,0,0,.35);
     }
-    .pin-on { width: 22px; height: 22px; outline: 3px solid rgba(34, 211, 238, .7); }
+    .pin-label-safe { background: #10B981; color: #fff; }
+    .pin-label-caution { background: #F59E0B; color: #1c1917; }
+    .pin-label-danger { background: #EF4444; color: #fff; }
+    .pin-label-mine { background: #F59E0B; color: #1c1917; }
+    .pin-label-gps { background: #38bdf8; color: #082f49; }
+    .pin-on { width: 26px; height: 26px; outline: 3px solid rgba(255,255,255,.85); }
     .pin-mine {
       width: 22px; height: 22px; border-radius: 7px; transform: translate(-50%, -50%);
       background: linear-gradient(145deg, #fde68a, #f59e0b);
@@ -69,6 +76,29 @@
       0% { box-shadow: 0 0 0 0 rgba(56,189,248,.55); }
       70% { box-shadow: 0 0 0 16px rgba(56,189,248,0); }
       100% { box-shadow: 0 0 0 0 rgba(56,189,248,0); }
+    }
+    @keyframes danger-pulse {
+      0% { box-shadow: 0 0 0 0 rgba(239,68,68,.72); }
+      70% { box-shadow: 0 0 0 16px rgba(239,68,68,0); }
+      100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); }
+    }
+    .legend-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      border-radius: 999px; padding: 5px 10px;
+      background: rgba(7, 20, 34, 0.82);
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,.14);
+      color: #e2e8f0; font-weight: 800;
+    }
+    .legend-btn.is-on { box-shadow: 0 0 0 1px rgba(255,255,255,.08) inset; }
+    .legend-btn:not(.is-on) { opacity: .42; filter: grayscale(.35); }
+    .legend-btn.is-on[data-filter="safe"] { border-color: rgba(16,185,129,.7); background: rgba(16,185,129,.18); }
+    .legend-btn.is-on[data-filter="caution"] { border-color: rgba(245,158,11,.7); background: rgba(245,158,11,.18); }
+    .legend-btn.is-on[data-filter="danger"] { border-color: rgba(239,68,68,.7); background: rgba(239,68,68,.18); }
+    .legend-btn.is-on[data-filter="mine"] { border-color: rgba(245,158,11,.7); background: rgba(245,158,11,.16); }
+    .legend-dot {
+      width: 10px; height: 10px; border-radius: 999px; flex-shrink: 0;
+      border: 1.5px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.25);
     }
     #sheet {
       position: fixed; left: 0; right: 0; bottom: 0; height: var(--sheet-h);
@@ -166,11 +196,19 @@
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.2-5.8"/><path d="M21 3v7h-7"/></svg>
       </button>
     </div>
-    <div class="mx-3 mt-2 flex gap-2 text-[11px] font-semibold">
-      <span class="glass rounded-full px-2.5 py-1 border border-white/10">● <span class="text-emerald-300">양호</span></span>
-      <span class="glass rounded-full px-2.5 py-1 border border-white/10">● <span class="text-amber-300">주의</span></span>
-      <span class="glass rounded-full px-2.5 py-1 border border-white/10">● <span class="text-rose-300">위험</span></span>
-      <span class="glass rounded-full px-2.5 py-1 border border-white/10">⭐ <span class="text-amber-200">내 포인트</span></span>
+    <div id="legend" class="mx-3 mt-2 flex gap-1.5 text-[11px] overflow-x-auto hide-scroll">
+      <button type="button" class="legend-btn is-on" data-filter="safe" aria-pressed="true">
+        <span class="legend-dot" style="background:#10B981"></span>양호
+      </button>
+      <button type="button" class="legend-btn is-on" data-filter="caution" aria-pressed="true">
+        <span class="legend-dot" style="background:#F59E0B"></span>주의
+      </button>
+      <button type="button" class="legend-btn is-on" data-filter="danger" aria-pressed="true">
+        <span class="legend-dot" style="background:#EF4444"></span>위험
+      </button>
+      <button type="button" class="legend-btn is-on" data-filter="mine" aria-pressed="true">
+        <span class="legend-dot" style="background:linear-gradient(145deg,#fde68a,#F59E0B)"></span>내 포인트
+      </button>
     </div>
   </header>
 
@@ -244,10 +282,12 @@
 
     const PEEK = 176, HALF = Math.round(window.innerHeight * 0.52), FULL = Math.round(window.innerHeight * 0.88);
     const MINE_KEY = "yunfish.myPoints.v1";
+    const ALERT_COLOR = { safe: "#10B981", caution: "#F59E0B", danger: "#EF4444" };
     const state = {
       data: null, selected: null, selectedKind: "official", tab: "official",
       map: null, overlays: {}, mineOverlays: {}, gpsOverlay: null, myPos: null,
       kakaoReady: false, sheet: PEEK, mine: [],
+      filters: { safe: true, caution: true, danger: true, mine: true },
     };
 
     const $ = (id) => document.getElementById(id);
@@ -266,6 +306,48 @@
     };
 
     const badgeClass = (level) => ({ safe: "badge-safe", caution: "badge-caution", danger: "badge-danger" }[level] || "badge-safe");
+    const alertLevel = (p) => (p?.alert?.level && ALERT_COLOR[p.alert.level] ? p.alert.level : "safe");
+    const isOfficialShown = (p) => !!state.filters[alertLevel(p)];
+
+    function visibleOfficials() {
+      return (state.data?.points || []).filter(isOfficialShown);
+    }
+
+    function applyMapFilters() {
+      document.querySelectorAll(".legend-btn").forEach((btn) => {
+        const on = !!state.filters[btn.dataset.filter];
+        btn.classList.toggle("is-on", on);
+        btn.setAttribute("aria-pressed", on ? "true" : "false");
+      });
+      if (!state.map) return;
+      (state.data?.points || []).forEach((p) => {
+        const ov = state.overlays[p.id];
+        if (!ov) return;
+        ov.setMap(isOfficialShown(p) ? state.map : null);
+      });
+      Object.values(state.mineOverlays).forEach((ov) => {
+        ov.setMap(state.filters.mine ? state.map : null);
+      });
+    }
+
+    function toggleFilter(key) {
+      state.filters[key] = !state.filters[key];
+      if (key !== "mine") {
+        const any = state.filters.safe || state.filters.caution || state.filters.danger;
+        if (!any) state.filters[key] = true;
+      }
+      applyMapFilters();
+      if (state.tab === "official" && state.selectedKind === "official") {
+        const cur = (state.data?.points || []).find((x) => x.id === state.selected);
+        if (!cur || !isOfficialShown(cur)) {
+          const next = visibleOfficials()[0];
+          if (next) state.selected = next.id;
+        }
+      }
+      renderChips();
+      renderCard();
+      highlightMarkers();
+    }
 
     function toast(msg) {
       const el = $("toast");
@@ -361,12 +443,13 @@
         wrap.querySelectorAll("button").forEach((btn) => btn.addEventListener("click", () => selectMine(btn.dataset.id, true)));
         return;
       }
-      wrap.innerHTML = (state.data?.points || []).map((p) => {
+      wrap.innerHTML = visibleOfficials().map((p) => {
         const on = state.selectedKind === "official" && state.selected === p.id;
+        const level = alertLevel(p);
         return `<button data-id="${p.id}" class="chip shrink-0 rounded-full px-3 py-1.5 text-[12px] font-semibold border ${on ? "bg-cyan-400 text-sea-950 border-cyan-300" : "bg-white/5 border-white/10 text-slate-200"}">
-          <span class="inline-block w-1.5 h-1.5 rounded-full mr-1 ${p.alert.level === "safe" ? "bg-emerald-400" : p.alert.level === "caution" ? "bg-amber-400" : "bg-rose-400"}"></span>${p.short_name}
+          <span class="inline-block w-2 h-2 rounded-full mr-1 border border-white/80" style="background:${ALERT_COLOR[level]}"></span>${p.short_name}
         </button>`;
-      }).join("");
+      }).join("") || `<span class="text-[12px] text-slate-500 px-1">선택한 상태의 포인트가 없습니다.</span>`;
       wrap.querySelectorAll("button").forEach((btn) => btn.addEventListener("click", () => selectPoint(btn.dataset.id, true)));
     }
 
@@ -437,10 +520,10 @@
         renderMineCard();
         return;
       }
-      const points = state.data?.points || [];
+      const points = visibleOfficials();
       const p = points.find((x) => x.id === state.selected) || points[0];
       if (!p) {
-        $("card").innerHTML = `<p class="text-sm text-slate-400">데이터를 불러오지 못했습니다.</p>`;
+        $("card").innerHTML = `<p class="text-sm text-slate-400">선택한 상태의 포인트가 없습니다. 상단 범례를 다시 켜 주세요.</p>`;
         return;
       }
       const w = p.weather || {};
@@ -600,20 +683,24 @@
       Object.values(state.overlays).forEach((ov) => ov.setMap(null));
       state.overlays = {};
       (state.data?.points || []).forEach((p) => {
+        const level = alertLevel(p);
+        const color = ALERT_COLOR[level];
         const wrap = document.createElement("div");
         wrap.className = "pin-wrap";
-        wrap.innerHTML = `<div class="pin pin-${p.alert.level}"></div><div class="pin-label">${p.short_name}</div>`;
+        wrap.innerHTML = `<div class="pin pin-${level}" style="background:${color}"></div><div class="pin-label pin-label-${level}">${p.short_name}</div>`;
         wrap.addEventListener("click", (e) => { e.stopPropagation(); selectPoint(p.id, false); });
         const overlay = new kakao.maps.CustomOverlay({
           position: new kakao.maps.LatLng(p.lat, p.lng),
           content: wrap,
           yAnchor: 0.5,
           xAnchor: 0.5,
-          zIndex: p.alert.level === "danger" ? 4 : 2,
+          clickable: true,
+          zIndex: level === "danger" ? 5 : level === "caution" ? 3 : 2,
         });
         overlay.setMap(state.map);
         state.overlays[p.id] = overlay;
       });
+      applyMapFilters();
     }
 
     function drawMineMarkers() {
@@ -623,7 +710,7 @@
       (state.mine || []).forEach((p) => {
         const wrap = document.createElement("div");
         wrap.className = "pin-wrap";
-        wrap.innerHTML = `<div class="pin-mine">⭐</div><div class="pin-label">${p.name}</div>`;
+        wrap.innerHTML = `<div class="pin-mine">⭐</div><div class="pin-label pin-label-mine">${p.name}</div>`;
         wrap.addEventListener("click", (e) => { e.stopPropagation(); selectMine(p.id, false); });
         const overlay = new kakao.maps.CustomOverlay({
           position: new kakao.maps.LatLng(p.lat, p.lng),
@@ -635,6 +722,7 @@
         overlay.setMap(state.map);
         state.mineOverlays[p.id] = overlay;
       });
+      applyMapFilters();
     }
 
     function drawGpsPin() {
@@ -642,7 +730,7 @@
       if (state.gpsOverlay) state.gpsOverlay.setMap(null);
       const wrap = document.createElement("div");
       wrap.className = "pin-wrap";
-      wrap.innerHTML = `<div class="pulse-pin"></div><div class="pin-label">내 위치</div>`;
+      wrap.innerHTML = `<div class="pulse-pin"></div><div class="pin-label pin-label-gps">내 위치</div>`;
       state.gpsOverlay = new kakao.maps.CustomOverlay({
         position: new kakao.maps.LatLng(state.myPos.lat, state.myPos.lng),
         content: wrap,
@@ -657,11 +745,13 @@
       drawOfficialMarkers();
       drawMineMarkers();
       drawGpsPin();
+      applyMapFilters();
       highlightMarkers();
     }
 
     function renderFallbackList() {
-      $("fallback-list").innerHTML = (state.data?.points || []).map((p) => `
+      const list = visibleOfficials();
+      $("fallback-list").innerHTML = (list.length ? list : (state.data?.points || [])).map((p) => `
         <button data-id="${p.id}" class="w-full text-left rounded-2xl border border-white/10 bg-white/5 p-3">
           <div class="flex justify-between items-center">
             <span class="font-bold">${p.name}</span>
@@ -862,6 +952,9 @@
     $("save-backdrop").addEventListener("click", closeSaveModal);
     $("save-close").addEventListener("click", closeSaveModal);
     $("save-form").addEventListener("submit", saveMinePoint);
+    document.querySelectorAll(".legend-btn").forEach((btn) => {
+      btn.addEventListener("click", () => toggleFilter(btn.dataset.filter));
+    });
 
     (async function boot() {
       state.mine = loadMine();
