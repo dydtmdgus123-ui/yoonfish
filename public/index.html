@@ -121,7 +121,6 @@
     </div>
   </header>
 
-  <script src="/api/config.js"></script>
   <section id="sheet" class="glass border-t border-white/10">
     <div id="sheet-handle" class="py-2 cursor-grab">
       <div class="w-10 h-1 rounded-full bg-white/30 mx-auto"></div>
@@ -133,6 +132,17 @@
   </section>
 
   <script>
+    const API_BASE = (window.location && window.location.origin) ? window.location.origin : "";
+    function apiUrl(path) {
+      const p = path.startsWith("/") ? path : "/" + path;
+      return API_BASE + p;
+    }
+    async function apiGet(path, options = {}) {
+      const res = await fetch(apiUrl(path), { cache: "no-store", ...options });
+      if (!res.ok) throw new Error("api " + path + " " + res.status);
+      return res.json();
+    }
+
     const PEEK = 176, HALF = Math.round(window.innerHeight * 0.52), FULL = Math.round(window.innerHeight * 0.88);
     const state = { data: null, selected: null, map: null, overlays: {}, kakaoReady: false, sheet: PEEK };
 
@@ -354,14 +364,13 @@
         state.data.points.forEach((p) => bounds.extend(new kakao.maps.LatLng(p.lat, p.lng)));
         try { state.map.setBounds(bounds); } catch (_) {}
       } catch (_) {
-        showMapFallback("카카오 지도를 열지 못했습니다. 카카오 개발자 콘솔에서 ① 카카오맵 사용 설정을 ON으로 켜고, ② 앱 → 플랫폼 키 → JavaScript 키 → JavaScript SDK 도메인에 http://127.0.0.1:8000 과 http://localhost:8000 을 넣은 뒤, 이 페이지를 Ctrl+F5 하세요.");
+        showMapFallback("카카오 지도를 열지 못했습니다. 카카오 개발자 콘솔 → JavaScript SDK 도메인에 " + API_BASE + " 을 등록한 뒤 새로고침하세요.");
       }
     }
 
     async function loadData(refresh = false) {
-      const url = refresh ? "/api/recommend?refresh=true" : "/api/recommend";
-      const res = await fetch(url, { cache: refresh ? "no-store" : "default" });
-      state.data = await res.json();
+      const path = refresh ? "/api/recommend?refresh=true" : "/api/recommend";
+      state.data = await apiGet(path);
       $("subhead").textContent = `${fmtDate(state.data.date)} · ${state.data.summary.headline}`;
       if (!state.selected) state.selected = state.data.points[0]?.id;
       renderChips();
@@ -401,16 +410,14 @@
       try {
         let cfg = window.__YUNFISH_CONFIG__;
         if (!cfg) {
-          const cfgRes = await fetch("/api/config");
-          if (!cfgRes.ok) throw new Error("config");
-          cfg = await cfgRes.json();
+          cfg = await apiGet("/api/config");
         }
         await loadData(false);
         setSheet(HALF);
         await initMap(cfg.kakao_js_key);
       } catch (err) {
         $("subhead").textContent = "서버에 연결하지 못했습니다";
-        $("card").innerHTML = `<p class="text-sm text-rose-300">API를 불러오지 못했습니다. PC 브라우저 주소창에 http://127.0.0.1:8000 을 직접 입력해 보세요.</p>`;
+        $("card").innerHTML = `<p class="text-sm text-rose-300">API를 불러오지 못했습니다. 같은 주소의 /api/health 가 열리는지 확인한 뒤 새로고침해 주세요.</p>`;
       }
       if ("serviceWorker" in navigator) {
         navigator.serviceWorker.register("/service-worker.js").catch(() => {});

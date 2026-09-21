@@ -3,19 +3,22 @@
   "functions": {
     "api/index.py": {
       "maxDuration": 10,
-      "includeFiles": "../{main.py,points_data.py,weather_service.py}"
+      "includeFiles": "{../main.py,../points_data.py,../weather_service.py}"
+    },
+    "api/recommend.py": {
+      "maxDuration": 10,
+      "includeFiles": "{../main.py,../points_data.py,../weather_service.py}"
+    },
+    "api/config.py": {
+      "maxDuration": 10,
+      "includeFiles": "{../main.py,../points_data.py,../weather_service.py}"
+    },
+    "api/health.py": {
+      "maxDuration": 10,
+      "includeFiles": "{../main.py,../points_data.py,../weather_service.py}"
     }
   },
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/index.py" }
-  ],
-  "headers": [
-    {
-      "source": "/service-worker.js",
-      "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" },
-        { "key": "Service-Worker-Allowed", "value": "/" }
-      ]
-    }
+    { "source": "/api/config.js", "destination": "/api/config" }
   ]
 }

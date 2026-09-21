@@ -1,4 +1,4 @@
-"""Vercel 엔트리: /api , /api/index"""
+"""Vercel 엔트리: /api/recommend"""
 
 from __future__ import annotations
 

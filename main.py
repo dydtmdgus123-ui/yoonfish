@@ -12,7 +12,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
@@ -95,6 +95,32 @@ for prefix in ("/api", ""):
     app.add_api_route(f"{prefix}/config", config, methods=["GET"])
     app.add_api_route(f"{prefix}/config.js", config_js, methods=["GET"])
     app.add_api_route(f"{prefix}/recommend", recommend, methods=["GET"])
+
+
+def _api_name(raw: str) -> str:
+    name = str(raw).split("?")[0].rstrip("/").split("/")[-1]
+    return name.replace(".py", "")
+
+
+async def dispatch_api(request: Request, p: str = "", refresh: bool = Query(False)):
+    """rewrites 로 /api/index 에 들어온 요청을 원래 엔드포인트로 연결."""
+    raw = p or request.headers.get("x-forwarded-uri") or request.headers.get("x-invoke-path") or request.url.path
+    name = _api_name(raw)
+    if name in ("recommend",):
+        return await recommend(refresh)
+    if name == "config.js":
+        return await config_js()
+    if name in ("config",):
+        return await config()
+    if name == "health":
+        return await health()
+    if name in ("api", "index", ""):
+        return await health()
+    return JSONResponse({"ok": False, "error": "not_found", "path": name}, status_code=404)
+
+
+app.add_api_route("/api/index", dispatch_api, methods=["GET"])
+app.add_api_route("/index", dispatch_api, methods=["GET"])
 
 
 def _public_file(*parts: str) -> Path:
