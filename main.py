@@ -123,13 +123,39 @@ async def service_worker():
     )
 
 
+@app.get("/favicon.svg")
+async def favicon_svg():
+    svg = PUBLIC_DIR / "favicon.svg"
+    if not svg.exists():
+        svg = BASE_DIR / "static" / "favicon.svg"
+    return FileResponse(svg, media_type="image/svg+xml")
+
+
 @app.get("/favicon.ico")
 async def favicon():
+    svg = PUBLIC_DIR / "favicon.svg"
+    if svg.exists():
+        return FileResponse(svg, media_type="image/svg+xml")
     png = ICONS_DIR / "icon-192.png"
     if png.exists():
         return FileResponse(png)
-    svg = ICONS_DIR / "icon.svg"
-    return FileResponse(svg, media_type="image/svg+xml")
+    return FileResponse(ICONS_DIR / "icon.svg", media_type="image/svg+xml")
+
+
+@app.get("/icon-192.png")
+async def icon_192():
+    path = PUBLIC_DIR / "icon-192.png"
+    if not path.exists():
+        path = ICONS_DIR / "icon-192.png"
+    return FileResponse(path, media_type="image/png")
+
+
+@app.get("/icon-512.png")
+async def icon_512():
+    path = PUBLIC_DIR / "icon-512.png"
+    if not path.exists():
+        path = ICONS_DIR / "icon-512.png"
+    return FileResponse(path, media_type="image/png")
 
 
 _static_root = PUBLIC_DIR / "static" if (PUBLIC_DIR / "static").exists() else BASE_DIR / "static"

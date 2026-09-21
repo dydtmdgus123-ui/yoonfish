@@ -1,10 +1,10 @@
-const CACHE_NAME = "yunfish-v5";
+const CACHE_NAME = "yunfish-v6";
 const PRECACHE = [
   "/",
   "/manifest.json",
-  "/static/icons/icon.svg",
-  "/static/icons/icon-192.png",
-  "/static/icons/icon-512.png",
+  "/favicon.svg",
+  "/icon-192.png",
+  "/icon-512.png",
 ];
 
 self.addEventListener("install", (event) => {

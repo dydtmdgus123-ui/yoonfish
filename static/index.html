@@ -9,8 +9,9 @@
   <meta name="description" content="포항 실시간 낚시 포인트 추천" />
   <title>윤피쉬 · 포항 포인트</title>
   <link rel="manifest" href="/manifest.json" />
-  <link rel="icon" href="/static/icons/icon.svg" type="image/svg+xml" />
-  <link rel="apple-touch-icon" href="/static/icons/icon-192.png" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="icon" href="/favicon.svg" sizes="any" />
+  <link rel="apple-touch-icon" href="/icon-192.png" />
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -73,7 +74,11 @@
     .tide-hi { border-color: rgba(56,189,248,.35); }
     .tide-lo { border-color: rgba(148,163,184,.35); }
     .golden { border-color: rgba(250,204,21,.55); background: rgba(250,204,21,.12); color: #fde68a; }
-    .hide-scroll::-webkit-scrollbar { display: none; }
+    .logo-mark {
+      width: 40px; height: 40px; flex-shrink: 0; display: block;
+      border-radius: 10px; overflow: hidden;
+      box-shadow: 0 4px 12px rgba(8, 51, 68, .35);
+    }
     .hide-scroll { scrollbar-width: none; }
   </style>
 </head>
@@ -86,7 +91,21 @@
 
   <header class="fixed top-0 left-0 right-0 z-20 pt-[env(safe-area-inset-top)]">
     <div class="mx-3 mt-3 glass rounded-2xl px-3 py-2.5 flex items-center gap-2 border border-white/10">
-      <img src="/static/icons/icon.svg" alt="" class="w-8 h-8 rounded-lg" />
+      <svg class="logo-mark" viewBox="0 0 64 64" aria-hidden="true">
+        <defs>
+          <linearGradient id="yfLogoBg" x1="8" y1="4" x2="58" y2="60" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#22d3ee"/>
+            <stop offset="45%" stop-color="#0e7490"/>
+            <stop offset="100%" stop-color="#083344"/>
+          </linearGradient>
+        </defs>
+        <rect width="64" height="64" rx="16" fill="url(#yfLogoBg)"/>
+        <path d="M10 42c10-3 22-4 34-1" fill="none" stroke="rgba(255,255,255,.28)" stroke-width="2.4" stroke-linecap="round"/>
+        <path d="M12 48c12-2.2 24-1.4 36 2" fill="none" stroke="rgba(255,255,255,.18)" stroke-width="2" stroke-linecap="round"/>
+        <path d="M16 32c10-14 30-15 40-3-9 2-13 7-13 13-8-1-18 1-27-10z" fill="#fff"/>
+        <circle cx="47" cy="26.5" r="2.2" fill="#083344"/>
+        <path d="M16 32c-5 1-8.5 6-10 11 7-1 11-3.5 13-8z" fill="#ecfeff"/>
+      </svg>
       <div class="flex-1 min-w-0">
         <div class="text-[15px] font-bold tracking-tight">윤피쉬</div>
         <div id="subhead" class="text-[11px] text-cyan-200/70 truncate">포항 포인트 · 불러오는 중</div>
