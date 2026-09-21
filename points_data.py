@@ -30,6 +30,30 @@ def season_of(month: int) -> str:
     return "spring"
 
 
+def zone(
+    zid: str,
+    name: str,
+    side: str,
+    cast_m: int,
+    cast_label: str,
+    species: list[str],
+    tip: str,
+    rig: str = "",
+    snag: bool = False,
+) -> dict[str, Any]:
+    return {
+        "id": zid,
+        "name": name,
+        "side": side,
+        "cast_m": cast_m,
+        "cast_label": cast_label,
+        "species": species,
+        "tip": tip,
+        "rig": rig,
+        "snag": snag,
+    }
+
+
 POINTS: list[dict[str, Any]] = [
     {
         "id": "yeongilman-north",
@@ -41,6 +65,15 @@ POINTS: list[dict[str, Any]] = [
         "exposure": 0.75,
         "tide_station": TIDE_STATION_POHANG,
         "tip": "내항 쪽은 바람이 덜하고, 외항 끝단은 조류가 살아 감성돔·볼락 포인트로 쓰입니다.",
+        "outer_facing_deg": 70,
+        "hit_zones": [
+            zone("yg-outer-light", "빨간등대 외항 끝단", "outer", 30, "외항 방향 30m 장타",
+                 ["삼치", "방어"], "조류 소통 최상. 테트라포드 끝 밑걸림 주의.", "쇼어지깅", True),
+            zone("yg-corner", "2~3번 꺾임부 코너", "corner", 10, "조류 합수부 10m 찌낚시",
+                 ["감성돔", "벵에돔"], "와류가 도는 합수부. 발판은 괜찮은 편.", "전유동 찌"),
+            zone("yg-inner-wall", "내항 발판 석축", "inner", 15, "내항 15m 원투/루어",
+                 ["학꽁치", "도다리", "볼락"], "발판 안전. 야간 볼락·주간 학꽁치.", "원투·볼락루어"),
+        ],
         "seasonal": {
             "spring": ["감성돔", "학꽁치", "볼락", "숭어"],
             "summer": ["전갱이", "고등어", "농어", "학꽁치"],
@@ -72,6 +105,13 @@ POINTS: list[dict[str, Any]] = [
         "exposure": 0.95,
         "tide_station": TIDE_STATION_POHANG,
         "tip": "수심이 깊은 외항 방파제라 농어·감성돔·무늬오징어가 잘 붙습니다. 바람이 세면 파고가 바로 살아납니다.",
+        "outer_facing_deg": 80,
+        "hit_zones": [
+            zone("sh-outer-1", "뜬방파제 마주보는 외항 1선", "outer", 25, "외항 조류 받히는 곳 25m 캐스팅",
+                 ["감성돔", "무늬오징어"], "조류가 직접 받는 1선. 장타 시 로프·닻줄 밑걸림.", "원투·에깅", True),
+            zone("sh-inner-market", "내항 어판장 앞 석축", "inner", 5, "석축 발밑 5m",
+                 ["볼락", "전갱이"], "발판 낮고 안전. 야간 볼락 명당.", "볼락루어"),
+        ],
         "seasonal": {
             "spring": ["감성돔", "농어", "학꽁치", "볼락"],
             "summer": ["농어", "벵에돔", "전갱이", "고등어"],
@@ -103,6 +143,15 @@ POINTS: list[dict[str, Any]] = [
         "exposure": 0.55,
         "tide_station": TIDE_STATION_POHANG,
         "tip": "시내와 가까워 짧은 출조에 좋습니다. 방파제·내항 위주로 학꽁치와 볼락이 꾸준합니다.",
+        "outer_facing_deg": 110,
+        "hit_zones": [
+            zone("sd-outer-ttp", "외항 TTP 끝단", "outer", 20, "외항 테트라 앞 20m 원투",
+                 ["학꽁치", "전갱이"], "도심 포인트답게 발판은 편하지만 주말 사람은 많음.", "원투"),
+            zone("sd-inner-walk", "내항 산책로 석축", "inner", 8, "내항 석축 8m 루어",
+                 ["볼락", "숭어"], "가로등 있어 야간 볼락. 밑걸림 적음.", "볼락루어"),
+            zone("sd-south-corner", "남측 꺾임 코너", "corner", 12, "와류 코너 12m 찌낚시",
+                 ["감성돔", "학꽁치"], "조류가 꺾이는 자리. 짧은 전유동.", "전유동 찌"),
+        ],
         "seasonal": {
             "spring": ["학꽁치", "볼락", "숭어", "감성돔"],
             "summer": ["학꽁치", "전갱이", "고등어", "숭어"],
@@ -134,6 +183,13 @@ POINTS: list[dict[str, Any]] = [
         "exposure": 1.25,
         "tide_station": TIDE_STATION_POHANG,
         "tip": "동해 끝단이라 너울과 맞바람이 강합니다. 감성돔·벵에돔·무늬오징어의 본거지입니다.",
+        "outer_facing_deg": 90,
+        "hit_zones": [
+            zone("hm-reef", "등대 밑 외항 여밭", "outer", 20, "20m 전방 간출여 지대",
+                 ["감성돔", "농어"], "대물 감성돔·농어 루어. 여 사이 밑걸림 심함.", "원투·농어루어", True),
+            zone("hm-inner-nose", "내항 콧부리", "inner", 10, "내항 콧부리 10m 캐스팅",
+                 ["학꽁치", "우럭"], "너울이 덜한 내항. 학꽁치·우럭 안정권.", "원투"),
+        ],
         "seasonal": {
             "spring": ["감성돔", "벵에돔", "볼락", "학꽁치"],
             "summer": ["벵에돔", "돌돔", "농어", "전갱이"],
@@ -165,6 +221,15 @@ POINTS: list[dict[str, Any]] = [
         "exposure": 1.15,
         "tide_station": TIDE_STATION_POHANG,
         "tip": "수심이 급격히 깊어져 방어·삼치·벵에돔이 받쳐집니다. 외항 끝은 파고 확인이 필수입니다.",
+        "outer_facing_deg": 100,
+        "hit_zones": [
+            zone("gr-outer-ttp", "외항 TTP 끝단", "outer", 35, "외항 깊은 수심 35m 장타",
+                 ["삼치", "방어", "벵에돔"], "수심 급변. 쇼어지깅 명당. 너울 높으면 철수.", "쇼어지깅", True),
+            zone("gr-inner-wall", "내항 석축", "inner", 8, "내항 석축 8m",
+                 ["볼락", "전갱이"], "발판 낮고 바람 적음. 야간 볼락.", "볼락루어"),
+            zone("gr-reef-nose", "갯바위 여밭 콧부리", "corner", 18, "여밭 앞 18m 찌낚시",
+                 ["감성돔", "벵에돔"], "여 사이 밑걸림. 목줄 여유 있게.", "전유동 찌", True),
+        ],
         "seasonal": {
             "spring": ["감성돔", "벵에돔", "학꽁치", "농어"],
             "summer": ["벵에돔", "고등어", "전갱이", "농어"],
@@ -196,6 +261,15 @@ POINTS: list[dict[str, Any]] = [
         "exposure": 1.05,
         "tide_station": TIDE_STATION_POHANG,
         "tip": "한적한 남부 소형 항포구. 감성돔·볼락·도다리가 꾸준하고 물때가 잘 맞는 날 조과가 좋습니다.",
+        "outer_facing_deg": 95,
+        "hit_zones": [
+            zone("yp-outer-end", "외항 방파제 끝", "outer", 22, "외항 끝 22m 캐스팅",
+                 ["감성돔", "무늬오징어"], "한적해서 장타하기 좋음. 테트라 틈 밑걸림.", "원투·에깅", True),
+            zone("yp-inner-wall", "내항 석축", "inner", 6, "내항 석축 6m",
+                 ["도다리", "볼락"], "바닥이 모래·펄. 도다리 원투에 좋음.", "원투"),
+            zone("yp-inlet-corner", "항 입구 코너 와류", "corner", 12, "입구 와류 12m 찌낚시",
+                 ["감성돔", "볼락"], "조류가 꺾이는 합수. 짧은 전유동.", "전유동 찌"),
+        ],
         "seasonal": {
             "spring": ["감성돔", "볼락", "도다리", "학꽁치"],
             "summer": ["벵에돔", "전갱이", "농어", "감성돔"],
@@ -227,6 +301,15 @@ POINTS: list[dict[str, Any]] = [
         "exposure": 0.9,
         "tide_station": TIDE_STATION_HUPO,
         "tip": "칠포해수욕장 옆 방파제. 야간 볼락과 봄·가을 학꽁치가 주력입니다.",
+        "outer_facing_deg": 75,
+        "hit_zones": [
+            zone("cp-outer-ttp", "외항 TTP", "outer", 20, "외항 테트라 앞 20m",
+                 ["학꽁치", "전갱이"], "해수욕장 너울이 바로 옴. 낮 학꽁치.", "원투"),
+            zone("cp-inner-beach", "내항 해수욕장 쪽 석축", "inner", 7, "내항 석축 7m",
+                 ["볼락", "학꽁치"], "야간 볼락 주력. 가로등 구간.", "볼락루어"),
+            zone("cp-bend", "방파제 꺾임부", "corner", 12, "꺾임부 12m 찌낚시",
+                 ["감성돔", "볼락"], "조류가 살짝 도는 자리. 목줄 여유.", "전유동 찌"),
+        ],
         "seasonal": {
             "spring": ["학꽁치", "볼락", "감성돔", "숭어"],
             "summer": ["전갱이", "학꽁치", "고등어", "농어"],
@@ -258,6 +341,15 @@ POINTS: list[dict[str, Any]] = [
         "exposure": 0.92,
         "tide_station": TIDE_STATION_HUPO,
         "tip": "포항 최북단 권역. 학꽁치·볼락·가자미가 안정적이고, 겨울에는 임연수어가 받쳐집니다.",
+        "outer_facing_deg": 80,
+        "hit_zones": [
+            zone("wp-outer-ttp", "외항 끝 테트라", "outer", 18, "외항 테트라 앞 18m",
+                 ["학꽁치", "가자미"], "북풍에 노출. 학꽁치·가자미 원투.", "원투"),
+            zone("wp-inner-wall", "내항 석축", "inner", 6, "내항 석축 6m",
+                 ["볼락", "도다리"], "등바람 자리. 발판 낮음.", "원투·볼락루어"),
+            zone("wp-north-reef", "북측 여밭", "corner", 15, "여밭 앞 15m",
+                 ["감성돔", "볼락"], "여 사이 밑걸림 주의. 감성돔 명당.", "전유동 찌", True),
+        ],
         "seasonal": {
             "spring": ["학꽁치", "볼락", "도다리", "감성돔"],
             "summer": ["학꽁치", "전갱이", "고등어", "숭어"],

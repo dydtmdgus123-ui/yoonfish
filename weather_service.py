@@ -649,6 +649,79 @@ def compute_alert(weather: dict[str, Any]) -> dict[str, str]:
     }
 
 
+def _ang_diff(a: float, b: float) -> float:
+    return abs((a - b + 180) % 360 - 180)
+
+
+def casting_advice(point: dict[str, Any], weather: dict[str, Any]) -> dict[str, Any]:
+    """실시간 풍향·풍속으로 외항/내항 중 던지기 좋은 자리를 고릅니다."""
+    zones = list(point.get("hit_zones") or [])
+    inner = next((z for z in zones if z.get("side") == "inner"), None)
+    outer = next((z for z in zones if z.get("side") == "outer"), None)
+    corner = next((z for z in zones if z.get("side") == "corner"), None)
+    wind_spd = float(weather.get("wind_speed") or 0)
+    wind_dir = weather.get("wind_dir") or "-"
+    wind_deg = weather.get("wind_dir_deg")
+    facing = float(point.get("outer_facing_deg") or 90)
+
+    def pack(pick: dict | None, badge: str, line: str, prefer: str) -> dict[str, Any]:
+        return {
+            "badge": badge,
+            "line": line,
+            "prefer": prefer,
+            "zone_id": (pick or {}).get("id"),
+            "wind_dir": wind_dir,
+            "wind_speed": round(wind_spd, 1),
+        }
+
+    fallback = outer or inner or (zones[0] if zones else None)
+    if wind_deg is None:
+        return pack(
+            fallback,
+            "💨 오늘 추천: 조류가 살아 있는 자리",
+            "풍향 정보가 없어 조류 소통이 좋은 자리를 우선하세요.",
+            "mixed",
+        )
+
+    head = _ang_diff(float(wind_deg), facing)
+    if wind_spd < 3.0:
+        pick = outer or fallback
+        name = pick["name"] if pick else "외항"
+        return pack(
+            pick,
+            f"💨 오늘 추천: {name} (약한 바람)",
+            f"현재 [{wind_dir} {wind_spd:.1f}m/s]입니다. 바람이 약하니 [{name}]에서 마음 놓고 던져도 됩니다.",
+            "outer",
+        )
+    if head <= 70:
+        pick = inner or corner or fallback
+        name = pick["name"] if pick else "내항 석축"
+        return pack(
+            pick,
+            "💨 오늘 추천: 내항 등바람 캐스팅",
+            f"현재 [{wind_dir} {wind_spd:.1f}m/s]입니다. 외항은 맞바람이 강하니, [{name}]에서 바람을 등지고 던지는 자리가 가장 쾌적합니다.",
+            "inner",
+        )
+    if head >= 110:
+        pick = outer or fallback
+        name = pick["name"] if pick else "외항"
+        return pack(
+            pick,
+            "💨 오늘 추천: 외항 등바람 캐스팅",
+            f"현재 [{wind_dir} {wind_spd:.1f}m/s]입니다. 외항이 등바람이라 [{name}]에서 장타하기 좋습니다.",
+            "outer",
+        )
+    pick = inner if (wind_spd >= 6 and inner) else (outer or fallback)
+    name = pick["name"] if pick else "꺾임부"
+    extra = pick.get("cast_label") if pick else "짧게"
+    return pack(
+        pick,
+        "💨 오늘 추천: 측풍 자리 캐스팅",
+        f"현재 [{wind_dir} {wind_spd:.1f}m/s] 측풍입니다. [{name}]에서 {extra}를 권합니다.",
+        "cross",
+    )
+
+
 def compute_windows(day: date, sun: dict[str, str], tides: list[dict[str, Any]]) -> list[dict[str, Any]]:
     sunrise = _parse_hhmm(day, sun["sunrise"])
     sunset = _parse_hhmm(day, sun["sunset"])
@@ -800,6 +873,8 @@ async def build_recommendation(force_refresh: bool = False) -> dict[str, Any]:
                 "today_species": today_species(point, month, limit=4),
                 "windows": compute_windows(day, sun, tides),
                 "alert": compute_alert(weather),
+                "hit_zones": point.get("hit_zones") or [],
+                "casting": casting_advice(point, weather),
                 "data_source": {"weather": wsrc, "tide": tide_src, "buoy": "kma" if buoy else "mock"},
             })
 

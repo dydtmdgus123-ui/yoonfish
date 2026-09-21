@@ -63,7 +63,12 @@
       width: 18px; height: 18px; border-radius: 999px; transform: translate(-50%, -50%);
       background: #a78bfa; border: 3px solid #fff;
       box-shadow: 0 0 0 0 rgba(167,139,250,.65);
-      animation: gps-pulse 1.6s ease-out infinite;
+      animation: search-pulse 1.6s ease-out infinite;
+    }
+    @keyframes search-pulse {
+      0% { box-shadow: 0 0 0 0 rgba(167,139,250,.55); }
+      70% { box-shadow: 0 0 0 14px rgba(167,139,250,0); }
+      100% { box-shadow: 0 0 0 0 rgba(167,139,250,0); }
     }
     .pin-on { width: 26px; height: 26px; outline: 3px solid rgba(255,255,255,.85); }
     .pin-mine {
@@ -73,16 +78,28 @@
       display: grid; place-items: center; font-size: 12px; line-height: 1;
     }
     .pin-mine.pin-on { outline: 3px solid rgba(250, 204, 21, .75); }
-    .pulse-pin {
-      width: 16px; height: 16px; border-radius: 999px; transform: translate(-50%, -50%);
-      background: #38bdf8; border: 2px solid #fff;
-      box-shadow: 0 0 0 0 rgba(56,189,248,.65);
-      animation: gps-pulse 1.6s ease-out infinite;
+    .gps-dot {
+      position: relative; width: 44px; height: 44px;
+      transform: translate(-50%, -50%); pointer-events: none;
     }
-    @keyframes gps-pulse {
-      0% { box-shadow: 0 0 0 0 rgba(56,189,248,.55); }
-      70% { box-shadow: 0 0 0 16px rgba(56,189,248,0); }
-      100% { box-shadow: 0 0 0 0 rgba(56,189,248,0); }
+    .gps-dot-wave, .gps-dot-wave2 {
+      position: absolute; left: 50%; top: 50%;
+      width: 14px; height: 14px; margin: -7px 0 0 -7px;
+      border-radius: 999px; background: rgba(37, 99, 235, 0.32);
+      animation: gps-wave 2.1s ease-out infinite;
+    }
+    .gps-dot-wave2 { animation-delay: 1.05s; background: rgba(37, 99, 235, 0.22); }
+    .gps-dot-core {
+      position: absolute; left: 50%; top: 50%;
+      width: 16px; height: 16px; margin: -8px 0 0 -8px;
+      border-radius: 999px; background: #2563EB;
+      border: 3px solid #fff;
+      box-shadow: 0 1px 4px rgba(15, 23, 42, .45);
+      z-index: 2;
+    }
+    @keyframes gps-wave {
+      0% { transform: scale(1); opacity: .5; }
+      100% { transform: scale(4.2); opacity: 0; }
     }
     @keyframes danger-pulse {
       0% { box-shadow: 0 0 0 0 rgba(239,68,68,.72); }
@@ -202,7 +219,12 @@
       display: grid; place-items: center;
       font-size: 22px; font-weight: 800;
     }
-    .fab-gps { background: #0e7490; color: #fff; }
+    .fab-gps {
+      background: #0f172a; color: #f8fafc;
+      border: 1.5px solid rgba(255,255,255,.22);
+    }
+    .fab-gps.is-on { background: #2563EB; color: #fff; border-color: #93c5fd; }
+    .fab-gps svg { display: block; }
     .fab-add { background: #f59e0b; color: #1c1917; }
     .fab:active { transform: scale(.95); }
     .chip { scroll-snap-align: start; }
@@ -307,7 +329,13 @@
 
   <div id="fabs">
     <button id="btn-add" class="fab fab-add" aria-label="포인트 등록">➕</button>
-    <button id="btn-gps" class="fab fab-gps" aria-label="내 위치">🎯</button>
+    <button id="btn-gps" class="fab fab-gps" aria-label="내 위치" aria-pressed="false">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <circle cx="12" cy="12" r="7.2" stroke="currentColor" stroke-width="1.8"/>
+        <circle cx="12" cy="12" r="2.15" fill="currentColor"/>
+        <path d="M12 2.8v3.1M12 18.1v3.1M2.8 12h3.1M18.1 12h3.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+      </svg>
+    </button>
   </div>
   <div id="toast"></div>
 
@@ -683,6 +711,31 @@
         </div>`;
     }
 
+    function hitZonesCard(p) {
+      const zones = p.hit_zones || [];
+      const adv = p.casting || {};
+      if (!zones.length && !adv.line) return "";
+      const rows = zones.map((z) => {
+        const on = adv.zone_id && adv.zone_id === z.id;
+        const tags = (z.species || []).map((s) => "#" + s).join(" ");
+        return `<div class="rounded-xl border ${on ? "border-cyan-300/45 bg-cyan-400/12" : "border-white/10 bg-white/5"} px-3 py-2">
+          <div class="flex items-start justify-between gap-2">
+            <div class="text-[13px] font-bold">${z.name}${on ? " · 오늘 추천" : ""}</div>
+            <div class="text-[11px] tabular-nums text-cyan-200 shrink-0">${z.cast_m}m</div>
+          </div>
+          <div class="text-[11px] text-slate-300 mt-0.5">${z.cast_label}${z.rig ? " · " + z.rig : ""}</div>
+          <div class="text-[11px] text-cyan-100/80 mt-0.5">${tags}${z.snag ? " · 밑걸림 주의" : ""}</div>
+          <div class="text-[11px] text-amber-100/75 mt-1">${z.tip || ""}</div>
+        </div>`;
+      }).join("");
+      return `<div class="rounded-2xl border border-sky-300/25 bg-gradient-to-b from-sky-500/12 to-white/[.03] p-3 mb-3">
+        <div class="text-[11px] font-semibold text-slate-400 mb-1">오늘 던지기 좋은 명당</div>
+        <div class="text-[13px] font-extrabold text-sky-100 mb-1">${adv.badge || ""}</div>
+        <p class="text-[12px] text-slate-200 leading-relaxed mb-2.5">${adv.line || ""}</p>
+        <div class="space-y-1.5">${rows}</div>
+      </div>`;
+    }
+
     function renderCard() {
       renderPeek();
       if (state.tab === "mine") {
@@ -722,6 +775,7 @@
           ${metric("물때", mulText, mul.phase_note || mulPhase)}
         </div>
         ${tideTimeline(p)}
+        ${hitZonesCard(p)}
         <div class="text-[11px] font-semibold text-slate-400 mb-1.5">오늘 추천 어종</div>
         <div class="flex flex-wrap gap-1.5 mb-3">
           ${(p.today_species || []).map((s) => `<span class="tag text-[12px] font-semibold px-2.5 py-1 rounded-full">#${s}</span>`).join("")}
@@ -935,12 +989,16 @@
 
     function drawGpsPin() {
       if (!state.map || !window.kakao || !state.myPos) return;
-      if (state.gpsOverlay) state.gpsOverlay.setMap(null);
+      const latlng = new kakao.maps.LatLng(state.myPos.lat, state.myPos.lng);
+      if (state.gpsOverlay) {
+        state.gpsOverlay.setPosition(latlng);
+        return;
+      }
       const wrap = document.createElement("div");
       wrap.className = "pin-wrap";
-      wrap.innerHTML = `<div class="pulse-pin"></div><div class="pin-label pin-label-gps">내 위치</div>`;
+      wrap.innerHTML = `<div class="gps-dot"><div class="gps-dot-wave"></div><div class="gps-dot-wave2"></div><div class="gps-dot-core"></div></div>`;
       state.gpsOverlay = new kakao.maps.CustomOverlay({
-        position: new kakao.maps.LatLng(state.myPos.lat, state.myPos.lng),
+        position: latlng,
         content: wrap,
         yAnchor: 0.5,
         xAnchor: 0.5,
@@ -1245,10 +1303,17 @@
       }
       const apply = (pos, announce) => {
         state.myPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        const gpsBtn = $("btn-gps");
+        if (gpsBtn) {
+          gpsBtn.classList.add("is-on");
+          gpsBtn.setAttribute("aria-pressed", "true");
+        }
         if (state.map && window.kakao) {
           const latlng = new kakao.maps.LatLng(state.myPos.lat, state.myPos.lng);
-          state.map.setLevel(5);
-          state.map.panTo(latlng);
+          if (announce) {
+            state.map.setLevel(5);
+            state.map.panTo(latlng);
+          }
           drawGpsPin();
         }
         if (announce) toast("현 위치를 표시했습니다.");
